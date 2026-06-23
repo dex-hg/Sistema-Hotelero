@@ -3,6 +3,12 @@ package hotel.modelo.entidades;
 import hotel.modelo.entidades.constantes.TipoHabitacion;
 import hotel.modelo.entidades.constantes.EstadoHabitacion;
 
+import hotel.patrones.comportamiento.DisponibleState;
+import hotel.patrones.comportamiento.EnLimpiezaState;
+import hotel.patrones.comportamiento.EstadoHabitacionState;
+import hotel.patrones.comportamiento.MantenimientoState;
+import hotel.patrones.comportamiento.OcupadaState;
+
 import java.math.BigDecimal;
 import java.util.Objects;
 
@@ -16,7 +22,7 @@ public final class Habitacion {
     private final int cantidadCamas;
     private final boolean banoPrivado;
     private final boolean tv;
-    private EstadoHabitacion estado;
+    private EstadoHabitacionState estado;
 
     public Habitacion(
             Integer id,
@@ -54,7 +60,7 @@ public final class Habitacion {
         this.cantidadCamas = cantidadCamas;
         this.banoPrivado = banoPrivado;
         this.tv = tv;
-        this.estado = Objects.requireNonNull(estado, "estado es obligatorio");
+        this.estado = crearEstado(Objects.requireNonNull(estado, "estado es obligatorio"));
     }
 
     public Integer getId() {
@@ -90,7 +96,39 @@ public final class Habitacion {
     }
 
     public EstadoHabitacion getEstado() {
-        return estado;
+        return estado.getEstado();
+    }
+
+    public void ocupar() {
+        estado = estado.ocupar();
+    }
+
+    public void iniciarLimpieza() {
+        estado = estado.iniciarLimpieza();
+    }
+
+    public void habilitar() {
+        estado = estado.habilitar();
+    }
+
+    public void enviarAMantenimiento() {
+        estado = estado.enviarAMantenimiento();
+    }
+
+    private EstadoHabitacionState crearEstado(EstadoHabitacion estado) {
+        return switch (estado) {
+            case DISPONIBLE ->
+                new DisponibleState();
+
+            case OCUPADA ->
+                new OcupadaState();
+
+            case EN_LIMPIEZA ->
+                new EnLimpiezaState();
+
+            case MANTENIMIENTO ->
+                new MantenimientoState();
+        };
     }
 
 }
