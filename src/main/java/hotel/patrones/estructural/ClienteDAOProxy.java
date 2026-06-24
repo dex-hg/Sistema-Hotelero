@@ -1,0 +1,70 @@
+package hotel.patrones.estructural;
+
+import hotel.dao.ClienteDAO;
+
+import hotel.modelo.entidades.Cliente;
+import hotel.modelo.sesion.ProveedorHotelId;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+
+public final class ClienteDAOProxy implements ClienteDAO {
+
+    private final ClienteDAO daoReal;
+    private final ProveedorHotelId proveedorHotelId;
+
+    public ClienteDAOProxy(
+            ClienteDAO daoReal,
+            ProveedorHotelId proveedorHotelId
+    ) {
+        this.daoReal = Objects.requireNonNull(daoReal);
+        this.proveedorHotelId = Objects.requireNonNull(proveedorHotelId);
+    }
+
+    @Override
+    public Optional<Cliente> buscarPorId(int id) {
+        exigirSesion();
+        return daoReal.buscarPorId(id);
+    }
+
+    @Override
+    public Optional<Cliente> buscarPorDocumento(String documentoIdentidad) {
+        exigirSesion();
+        return daoReal.buscarPorDocumento(documentoIdentidad);
+    }
+
+    @Override
+    public List<Cliente> listar() {
+        exigirSesion();
+        return daoReal.listar();
+    }
+
+    @Override
+    public Cliente crear(Cliente cliente) {
+        exigirMismoHotel(cliente.getHotelId());
+        return daoReal.crear(cliente);
+    }
+
+    @Override
+    public boolean actualizar(Cliente cliente) {
+        exigirMismoHotel(cliente.getHotelId());
+        return daoReal.actualizar(cliente);
+    }
+
+    @Override
+    public boolean eliminar(int id) {
+        exigirSesion();
+        return daoReal.eliminar(id);
+    }
+
+    private void exigirSesion() {
+        proveedorHotelId.getHotelId();
+    }
+
+    private void exigirMismoHotel(int hotelId) {
+        if (hotelId != proveedorHotelId.getHotelId()) {
+            throw new AccesoTenantException();
+        }
+    }
+}
