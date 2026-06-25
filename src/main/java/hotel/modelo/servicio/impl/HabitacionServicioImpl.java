@@ -1,0 +1,131 @@
+package hotel.modelo.servicio.impl;
+
+import hotel.dao.HabitacionDAO;
+
+import hotel.modelo.entidades.Habitacion;
+import hotel.modelo.entidades.constantes.TipoHabitacion;
+import hotel.modelo.sesion.ProveedorHotelId;
+import hotel.modelo.servicio.HabitacionServicio;
+
+import hotel.patrones.creacional.HabitacionBuilder;
+
+import hotel.excepcion.EntidadNoEncontradaException;
+import hotel.excepcion.ReglaNegocioException;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Consumer;
+
+public final class HabitacionServicioImpl implements HabitacionServicio {
+
+    private final HabitacionDAO habitacionDAO;
+    private final ProveedorHotelId proveedorHotelId;
+
+    public HabitacionServicioImpl(
+            HabitacionDAO habitacionDAO,
+            ProveedorHotelId proveedorHotelId
+    ) {
+        this.habitacionDAO = Objects.requireNonNull(habitacionDAO);
+        this.proveedorHotelId = Objects.requireNonNull(proveedorHotelId);
+    }
+
+    @Override
+    public Habitacion buscarPorId(int id) {
+        return habitacionDAO.buscarPorId(id).orElseThrow(
+                () -> new EntidadNoEncontradaException(
+                        "No existe la habitacion " + id
+                )
+        );
+    }
+
+    @Override
+    public Optional<Habitacion> buscarPorNumero(String numero) {
+        return habitacionDAO.buscarPorNumero(numero);
+    }
+
+    @Override
+    public List<Habitacion> listar() {
+        return habitacionDAO.listar();
+    }
+
+    @Override
+    public Habitacion crear(
+            String numero,
+            TipoHabitacion tipo,
+            BigDecimal precioPorNoche,
+            int cantidadCamas,
+            boolean banoPrivado,
+            boolean tv
+    ) {
+        if (habitacionDAO.buscarPorNumero(numero).isPresent()) {
+            throw new ReglaNegocioException(
+                    "Ya existe una habitacion con el numero " + numero
+            );
+        }
+
+        HabitacionBuilder builder = new HabitacionBuilder()
+                .paraHotel(proveedorHotelId.getHotelId())
+                .conNumero(numero)
+                .deTipo(tipo)
+                .conPrecioPorNoche(precioPorNoche)
+                .conCantidadCamas(cantidadCamas);
+
+        if (banoPrivado) {
+            builder.conBanoPrivado();
+        }
+        if (tv) {
+            builder.conTv();
+        }
+
+        return habitacionDAO.crear(builder.construir());
+    }
+
+    @Override
+    public boolean actualizar(Habitacion habitacion) {
+        Objects.requireNonNull(
+                habitacion,
+                "habitacion es obligatoria"
+        );
+
+        return habitacionDAO.actualizar(habitacion);
+    }
+
+    @Override
+    public boolean eliminar(int id) {
+        return habitacionDAO.eliminar(id);
+    }
+
+    @Override
+    public Habitacion ocupar(int id) {
+        return cambiarEstado(id, Habitacion::ocupar);
+    }
+
+    @Override
+    public Habitacion iniciarLimpieza(int id) {
+        return cambiarEstado(id, Habitacion::iniciarLimpieza);
+    }
+
+    @Override
+    public Habitacion habilitar(int id) {
+        return cambiarEstado(id, Habitacion::habilitar);
+    }
+
+    @Override
+    public Habitacion enviarAMantenimiento(int id) {
+        return cambiarEstado(id, Habitacion::enviarAMantenimiento);
+    }
+
+    private Habitacion cambiarEstado(int id, Consumer<Habitacion> transicion) {
+        Habitacion habitacion = buscarPorId(id);
+        transicion.accept(habitacion);
+
+        if (!habitacionDAO.actualizar(habitacion)) {
+            throw new EntidadNoEncontradaException(
+                    "La habitacion dejo de existir durante la actualizacion"
+            );
+        }
+        return habitacion;
+    }
+}

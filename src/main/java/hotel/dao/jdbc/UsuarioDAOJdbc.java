@@ -2,7 +2,7 @@ package hotel.dao.jdbc;
 
 import hotel.conexion.ProveedorConexion;
 
-import hotel.dao.DAOException;
+import hotel.excepcion.DAOException;
 import hotel.dao.UsuarioDAO;
 
 import hotel.modelo.entidades.Usuario;

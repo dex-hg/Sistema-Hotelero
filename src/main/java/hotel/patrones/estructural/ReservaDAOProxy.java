@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import hotel.excepcion.AccesoTenantException;
+
 public final class ReservaDAOProxy implements ReservaDAO {
 
     private final ReservaDAO daoReal;

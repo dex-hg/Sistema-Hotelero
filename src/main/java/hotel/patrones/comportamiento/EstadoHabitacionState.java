@@ -1,5 +1,6 @@
 package hotel.patrones.comportamiento;
 
+import hotel.excepcion.TransicionEstadoHabitacionException;
 import hotel.modelo.entidades.constantes.EstadoHabitacion;
 
 public interface EstadoHabitacionState {
@@ -24,7 +25,10 @@ public interface EstadoHabitacionState {
 
     private TransicionEstadoHabitacionException transicionInvalida(String accion) {
         return new TransicionEstadoHabitacionException(
-                "No se puede " + accion + " una habitacion en estado " + getEstado()
+                "No se puede "
+                + accion
+                + " una habitacion en estado "
+                + getEstado()
         );
     }
 }

@@ -1,4 +1,4 @@
-package hotel.modelo.sesion;
+package hotel.excepcion;
 
 public final class SesionNoIniciadaException extends IllegalStateException {
 

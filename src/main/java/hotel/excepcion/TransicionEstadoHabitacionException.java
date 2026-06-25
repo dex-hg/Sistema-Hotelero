@@ -1,4 +1,4 @@
-package hotel.patrones.comportamiento;
+package hotel.excepcion;
 
 public final class TransicionEstadoHabitacionException extends IllegalStateException {
 

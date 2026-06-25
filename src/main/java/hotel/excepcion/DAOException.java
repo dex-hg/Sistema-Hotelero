@@ -1,4 +1,4 @@
-package hotel.dao;
+package hotel.excepcion;
 
 public final class DAOException extends RuntimeException {
 

@@ -1,4 +1,4 @@
-package hotel.patrones.estructural;
+package hotel.excepcion;
 
 public final class AccesoTenantException extends SecurityException {
 
