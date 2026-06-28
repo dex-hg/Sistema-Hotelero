@@ -39,6 +39,18 @@ public final class ClienteControlador {
         );
     }
 
+    public Cliente guardarOActualizarPorDocumento(
+            String nombre,
+            String documento,
+            String telefono
+    ) {
+        return servicio.guardarOActualizarPorDocumento(
+                nombre,
+                documento,
+                telefono
+        );
+    }
+
     public boolean actualizar(Cliente cliente) {
         return servicio.actualizar(cliente);
     }

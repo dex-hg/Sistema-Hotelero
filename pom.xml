@@ -10,7 +10,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>23</maven.compiler.release>
-        <exec.mainClass>Sistema_Hotel</exec.mainClass>
+        <exec.mainClass>hotel.HostelFlowAplicacion</exec.mainClass>
     </properties>
     
     <build>
@@ -29,6 +29,11 @@
             <artifactId>postgresql</artifactId>
             <version>42.7.11</version>
         </dependency>  
+        <dependency>
+            <groupId>com.formdev</groupId>
+            <artifactId>flatlaf</artifactId>
+            <version>3.6</version>
+        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>

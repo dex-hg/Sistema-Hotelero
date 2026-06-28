@@ -50,19 +50,23 @@ public final class ReservaDAOJdbc implements ReservaDAO {
                 + "WHERE hotel_id = ? "
                 + "AND id = ?";
 
-        try (
-                Connection conexion = proveedorConexion.obtenerConexion();
-                PreparedStatement sentencia = conexion.prepareStatement(sql)
-        ) {
+        Connection conexion = null;
+        try {
+            conexion = proveedorConexion.obtenerConexion();
+            try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
             sentencia.setInt(1, proveedorHotelId.getHotelId());
             sentencia.setInt(2, id);
 
             try (ResultSet resultado = sentencia.executeQuery()) {
-                return resultado.next() ? Optional.of(mapear(resultado)) : Optional.empty();
+                return resultado.next() ? Optional.of(
+                        mapear(resultado)) : Optional.empty();
+            }
             }
 
         } catch (SQLException e) {
             throw new DAOException("No se pudo buscar la reserva", e);
+        } finally {
+            liberarConexion(conexion);
         }
     }
 
@@ -77,10 +81,10 @@ public final class ReservaDAOJdbc implements ReservaDAO {
 
         List<Reserva> reservas = new ArrayList<>();
 
-        try (
-                Connection conexion = proveedorConexion.obtenerConexion();
-                PreparedStatement sentencia = conexion.prepareStatement(sql)
-        ) {
+        Connection conexion = null;
+        try {
+            conexion = proveedorConexion.obtenerConexion();
+            try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
             sentencia.setInt(1, proveedorHotelId.getHotelId());
 
             try (ResultSet resultado = sentencia.executeQuery()) {
@@ -90,9 +94,15 @@ public final class ReservaDAOJdbc implements ReservaDAO {
             }
 
             return reservas;
+            }
 
         } catch (SQLException e) {
-            throw new DAOException("No se pudieron listar las reservas", e);
+            throw new DAOException(
+                    "No se pudieron listar las reservas",
+                    e
+            );
+        } finally {
+            liberarConexion(conexion);
         }
     }
 
@@ -105,24 +115,36 @@ public final class ReservaDAOJdbc implements ReservaDAO {
                 + "total_pagado, estado_reserva) "
                 + "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
-        try (
-                Connection conexion = proveedorConexion.obtenerConexion();
-                PreparedStatement sentencia = conexion.prepareStatement(
-                sql,
-                Statement.RETURN_GENERATED_KEYS
-        )) {
+        Connection conexion = null;
+        try {
+            conexion = proveedorConexion.obtenerConexion();
+            try (PreparedStatement sentencia = conexion.prepareStatement(
+                    sql,
+                    Statement.RETURN_GENERATED_KEYS
+            )) {
             sentencia.setInt(1, proveedorHotelId.getHotelId());
             sentencia.setInt(2, reserva.getHabitacionId());
             sentencia.setInt(3, reserva.getClienteId());
-            sentencia.setTimestamp(4, Timestamp.valueOf(reserva.getFechaIngreso()));
-            sentencia.setTimestamp(5, Timestamp.valueOf(reserva.getFechaSalida()));
-            sentencia.setBigDecimal(6, reserva.getTotalPagado());
+            sentencia.setTimestamp(
+                    4,
+                    Timestamp.valueOf(reserva.getFechaIngreso())
+            );
+            sentencia.setTimestamp(
+                    5, 
+                    Timestamp.valueOf(reserva.getFechaSalida())
+            );
+            sentencia.setBigDecimal(
+                    6, 
+                    reserva.getTotalPagado()
+            );
             sentencia.setString(7, reserva.getEstado().name());
             sentencia.executeUpdate();
 
             try (ResultSet claves = sentencia.getGeneratedKeys()) {
                 if (!claves.next()) {
-                    throw new DAOException("PostgreSQL no devolvio el id de la reserva");
+                    throw new DAOException(
+                            "PostgreSQL no devolvio el id de la reserva"
+                    );
                 }
 
                 return new Reserva(
@@ -136,9 +158,15 @@ public final class ReservaDAOJdbc implements ReservaDAO {
                         reserva.getEstado()
                 );
             }
+            }
 
         } catch (SQLException e) {
-            throw new DAOException("No se pudo crear la reserva", e);
+            throw new DAOException(
+                    "No se pudo crear la reserva",
+                    e
+            );
+        } finally {
+            liberarConexion(conexion);
         }
     }
 
@@ -153,40 +181,54 @@ public final class ReservaDAOJdbc implements ReservaDAO {
                 + "WHERE hotel_id = ? "
                 + "AND id = ?";
 
-        try (
-                Connection conexion = proveedorConexion.obtenerConexion(); 
-                PreparedStatement sentencia = conexion.prepareStatement(sql)
-        ) {
+        Connection conexion = null;
+        try {
+            conexion = proveedorConexion.obtenerConexion();
+            try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
             sentencia.setInt(1, reserva.getHabitacionId());
             sentencia.setInt(2, reserva.getClienteId());
-            sentencia.setTimestamp(3, Timestamp.valueOf(reserva.getFechaIngreso()));
-            sentencia.setTimestamp(4, Timestamp.valueOf(reserva.getFechaSalida()));
+            sentencia.setTimestamp(3,
+                    Timestamp.valueOf(
+                            reserva.getFechaIngreso())
+            );
+            sentencia.setTimestamp(4, Timestamp.valueOf(
+                    reserva.getFechaSalida())
+            );
             sentencia.setBigDecimal(5, reserva.getTotalPagado());
             sentencia.setString(6, reserva.getEstado().name());
             sentencia.setInt(7, proveedorHotelId.getHotelId());
             sentencia.setInt(8, reserva.getId());
             
             return sentencia.executeUpdate() == 1;
+            }
             
         } catch (SQLException e) {
-            throw new DAOException("No se pudo actualizar la reserva", e);
+            throw new DAOException(
+                    "No se pudo actualizar la reserva", 
+                    e
+       );
+        } finally {
+            liberarConexion(conexion);
         }
     }
 
     @Override
     public boolean eliminar(int id) {
         String sql = "DELETE FROM reservas WHERE hotel_id = ? AND id = ?";
-        try (
-                Connection conexion = proveedorConexion.obtenerConexion();
-                PreparedStatement sentencia = conexion.prepareStatement(sql)
-        ) {
+        Connection conexion = null;
+        try {
+            conexion = proveedorConexion.obtenerConexion();
+            try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
             sentencia.setInt(1, proveedorHotelId.getHotelId());
             sentencia.setInt(2, id);
             
             return sentencia.executeUpdate() == 1;
+            }
             
         } catch (SQLException e) {
             throw new DAOException("No se pudo eliminar la reserva", e);
+        } finally {
+            liberarConexion(conexion);
         }
     }
 
@@ -208,6 +250,18 @@ public final class ReservaDAOJdbc implements ReservaDAO {
             throw new IllegalArgumentException(
                     "La reserva debe tener id para actualizarse"
             );
+        }
+    }
+
+    private void liberarConexion(Connection conexion) {
+        if (conexion == null) {
+            return;
+        }
+
+        try {
+            proveedorConexion.liberarConexion(conexion);
+        } catch (SQLException e) {
+            throw new DAOException("No se pudo liberar la conexion de reservas", e);
         }
     }
 }

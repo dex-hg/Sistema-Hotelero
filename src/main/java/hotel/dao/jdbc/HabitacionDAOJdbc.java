@@ -43,15 +43,20 @@ public final class HabitacionDAOJdbc implements HabitacionDAO {
     @Override
     public Optional<Habitacion> buscarPorNumero(String numero) {
         String sql = "SELECT " + COLUMNAS + " FROM habitaciones WHERE hotel_id = ? AND numero = ?";
-        try (Connection conexion = proveedorConexion.obtenerConexion();
-             PreparedStatement sentencia = conexion.prepareStatement(sql)) {
+        Connection conexion = null;
+        try {
+            conexion = proveedorConexion.obtenerConexion();
+            try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
             sentencia.setInt(1, proveedorHotelId.getHotelId());
             sentencia.setString(2, numero);
             try (ResultSet resultado = sentencia.executeQuery()) {
                 return resultado.next() ? Optional.of(mapear(resultado)) : Optional.empty();
             }
+            }
         } catch (SQLException e) {
             throw new DAOException("No se pudo buscar la habitacion", e);
+        } finally {
+            liberarConexion(conexion);
         }
     }
 
@@ -59,15 +64,20 @@ public final class HabitacionDAOJdbc implements HabitacionDAO {
     public List<Habitacion> listar() {
         String sql = "SELECT " + COLUMNAS + " FROM habitaciones WHERE hotel_id = ? ORDER BY numero";
         List<Habitacion> habitaciones = new ArrayList<>();
-        try (Connection conexion = proveedorConexion.obtenerConexion();
-             PreparedStatement sentencia = conexion.prepareStatement(sql)) {
+        Connection conexion = null;
+        try {
+            conexion = proveedorConexion.obtenerConexion();
+            try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
             sentencia.setInt(1, proveedorHotelId.getHotelId());
             try (ResultSet resultado = sentencia.executeQuery()) {
                 while (resultado.next()) habitaciones.add(mapear(resultado));
             }
             return habitaciones;
+            }
         } catch (SQLException e) {
             throw new DAOException("No se pudieron listar las habitaciones", e);
+        } finally {
+            liberarConexion(conexion);
         }
     }
 
@@ -75,16 +85,21 @@ public final class HabitacionDAOJdbc implements HabitacionDAO {
     public Habitacion crear(Habitacion habitacion) {
         String sql = "INSERT INTO habitaciones (hotel_id, numero, tipo, precio_por_noche, cantidad_camas, "
                 + "tiene_bano_privado, tiene_tv, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        try (Connection conexion = proveedorConexion.obtenerConexion();
-             PreparedStatement sentencia = conexion.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        Connection conexion = null;
+        try {
+            conexion = proveedorConexion.obtenerConexion();
+            try (PreparedStatement sentencia = conexion.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             asignarCampos(sentencia, habitacion);
             sentencia.executeUpdate();
             try (ResultSet claves = sentencia.getGeneratedKeys()) {
                 if (!claves.next()) throw new DAOException("PostgreSQL no devolvio el id de la habitacion");
                 return copiarConId(habitacion, claves.getInt(1));
             }
+            }
         } catch (SQLException e) {
             throw new DAOException("No se pudo crear la habitacion", e);
+        } finally {
+            liberarConexion(conexion);
         }
     }
 
@@ -93,8 +108,10 @@ public final class HabitacionDAOJdbc implements HabitacionDAO {
         exigirId(habitacion.getId());
         String sql = "UPDATE habitaciones SET numero = ?, tipo = ?, precio_por_noche = ?, cantidad_camas = ?, "
                 + "tiene_bano_privado = ?, tiene_tv = ?, estado = ? WHERE hotel_id = ? AND id = ?";
-        try (Connection conexion = proveedorConexion.obtenerConexion();
-             PreparedStatement sentencia = conexion.prepareStatement(sql)) {
+        Connection conexion = null;
+        try {
+            conexion = proveedorConexion.obtenerConexion();
+            try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
             sentencia.setString(1, habitacion.getNumero());
             sentencia.setString(2, habitacion.getTipo().name());
             sentencia.setBigDecimal(3, habitacion.getPrecioPorNoche());
@@ -105,34 +122,47 @@ public final class HabitacionDAOJdbc implements HabitacionDAO {
             sentencia.setInt(8, proveedorHotelId.getHotelId());
             sentencia.setInt(9, habitacion.getId());
             return sentencia.executeUpdate() == 1;
+            }
         } catch (SQLException e) {
             throw new DAOException("No se pudo actualizar la habitacion", e);
+        } finally {
+            liberarConexion(conexion);
         }
     }
 
     @Override
     public boolean eliminar(int id) {
         String sql = "DELETE FROM habitaciones WHERE hotel_id = ? AND id = ?";
-        try (Connection conexion = proveedorConexion.obtenerConexion();
-             PreparedStatement sentencia = conexion.prepareStatement(sql)) {
+        Connection conexion = null;
+        try {
+            conexion = proveedorConexion.obtenerConexion();
+            try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
             sentencia.setInt(1, proveedorHotelId.getHotelId());
             sentencia.setInt(2, id);
             return sentencia.executeUpdate() == 1;
+            }
         } catch (SQLException e) {
             throw new DAOException("No se pudo eliminar la habitacion", e);
+        } finally {
+            liberarConexion(conexion);
         }
     }
 
     private Optional<Habitacion> buscarUno(String sql, int id) {
-        try (Connection conexion = proveedorConexion.obtenerConexion();
-             PreparedStatement sentencia = conexion.prepareStatement(sql)) {
+        Connection conexion = null;
+        try {
+            conexion = proveedorConexion.obtenerConexion();
+            try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
             sentencia.setInt(1, proveedorHotelId.getHotelId());
             sentencia.setInt(2, id);
             try (ResultSet resultado = sentencia.executeQuery()) {
                 return resultado.next() ? Optional.of(mapear(resultado)) : Optional.empty();
             }
+            }
         } catch (SQLException e) {
             throw new DAOException("No se pudo buscar la habitacion", e);
+        } finally {
+            liberarConexion(conexion);
         }
     }
 
@@ -174,5 +204,17 @@ public final class HabitacionDAOJdbc implements HabitacionDAO {
 
     private void exigirId(Integer id) {
         if (id == null) throw new IllegalArgumentException("La habitacion debe tener id para actualizarse");
+    }
+
+    private void liberarConexion(Connection conexion) {
+        if (conexion == null) {
+            return;
+        }
+
+        try {
+            proveedorConexion.liberarConexion(conexion);
+        } catch (SQLException e) {
+            throw new DAOException("No se pudo liberar la conexion de habitaciones", e);
+        }
     }
 }

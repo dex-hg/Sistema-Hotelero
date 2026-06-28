@@ -3,6 +3,7 @@ package hotel.integracion;
 import hotel.conexion.ConexionBD;
 import hotel.conexion.ConexionConfig;
 import hotel.conexion.ProveedorConexion;
+import hotel.configuracion.ComposicionAplicacion;
 import hotel.controlador.ClienteControlador;
 import hotel.controlador.HabitacionControlador;
 import hotel.controlador.ReservaControlador;
@@ -103,6 +104,92 @@ public final class DAOIntegracionTest {
         sesion.iniciar(principalUno);
         Usuario usuarioUno = usuarios.crear(principalUno);
         verificar(usuarioUno.getId() != null, "UsuarioDAO debe devolver el id generado");
+
+        ComposicionAplicacion aplicacion = new ComposicionAplicacion(conexiones, new ContextoSesion());
+        esperarExcepcion(SesionNoIniciadaException.class,
+                () -> aplicacion.habitacionControlador().listar(),
+                "La composicion debe entregar controladores protegidos por Proxy");
+        esperarExcepcion(ReglaNegocioException.class,
+                () -> aplicacion.autenticacionControlador().iniciarSesion(
+                        hotelUno.getRuc(),
+                        "admin1",
+                        "clave-incorrecta"),
+                "La autenticacion debe rechazar contrasenas incorrectas");
+
+        Usuario autenticado = aplicacion.autenticacionControlador().iniciarSesion(
+                hotelUno.getRuc(),
+                "admin1",
+                "texto-plano");
+        verificar(autenticado.getId().equals(usuarioUno.getId()),
+                "La autenticacion por RUC debe iniciar sesion con el usuario persistido");
+        verificar(aplicacion.contextoSesion().getHotelId() == hotelUno.getId(),
+                "La autenticacion debe fijar el hotel activo en el contexto de sesion");
+
+        Habitacion habitacionAdmin = aplicacion.habitacionControlador().crear(
+                "301", TipoHabitacion.INDIVIDUAL, new BigDecimal("55.00"), 1, false, true);
+        Habitacion habitacionAdminActualizada = new HabitacionBuilder()
+                .conId(habitacionAdmin.getId())
+                .paraHotel(hotelUno.getId())
+                .conNumero("301-A")
+                .deTipo(TipoHabitacion.MATRIMONIAL)
+                .conPrecioPorNoche(new BigDecimal("75.00"))
+                .conCantidadCamas(1)
+                .conTv()
+                .construir();
+        verificar(aplicacion.habitacionControlador().actualizar(habitacionAdminActualizada),
+                "El administrador debe poder modificar habitaciones");
+        verificar(aplicacion.habitacionControlador().buscarPorNumero("301-A").isPresent(),
+                "Debe persistirse la modificacion de habitacion");
+        verificar(aplicacion.habitacionControlador().eliminar(habitacionAdmin.getId()),
+                "El administrador debe poder eliminar habitaciones");
+
+        Habitacion habitacionTransaccional = aplicacion.habitacionControlador().crear(
+                "201", TipoHabitacion.DOBLE, new BigDecimal("90.00"), 2, true, true);
+        Cliente clienteTransaccional = aplicacion.clienteControlador().crear(
+                "Cliente Transaccional", "DOC-TX", "988");
+        Reserva reservaTransaccional = aplicacion.reservaControlador().crear(
+                habitacionTransaccional.getId(), clienteTransaccional.getId(),
+                ahora.plusDays(5), ahora.plusDays(6), BigDecimal.ZERO);
+
+        aplicacion.reservaControlador().registrarCheckIn(reservaTransaccional.getId());
+        verificar(aplicacion.habitacionControlador().buscarPorId(habitacionTransaccional.getId())
+                .getEstado() == EstadoHabitacion.OCUPADA,
+                "El check-in debe ocupar la habitacion dentro del tenant activo");
+
+        Reserva reservaFinalizada = aplicacion.reservaControlador().registrarCheckOut(
+                reservaTransaccional.getId());
+        verificar(reservaFinalizada.getEstado() == EstadoReserva.FINALIZADA,
+                "El check-out debe finalizar la reserva");
+        verificar(aplicacion.habitacionControlador().buscarPorId(habitacionTransaccional.getId())
+                .getEstado() == EstadoHabitacion.EN_LIMPIEZA,
+                "El check-out debe enviar la habitacion a limpieza");
+
+        Habitacion habitacionRecepcion = aplicacion.habitacionControlador().crear(
+                "202", TipoHabitacion.DOBLE, new BigDecimal("95.00"), 2, true, true);
+        Reserva reservaRecepcion = aplicacion.reservaControlador().registrarRecepcion(
+                "Cliente Transaccional Actualizado",
+                "DOC-TX",
+                "977",
+                habitacionRecepcion.getId(),
+                ahora.plusDays(7),
+                ahora.plusDays(8));
+        verificar(reservaRecepcion.getEstado() == EstadoReserva.ACTIVA,
+                "La recepcion debe crear una reserva activa");
+        verificar(reservaRecepcion.getTotalPagado().compareTo(new BigDecimal("95.00")) == 0,
+                "La recepcion debe calcular el total segun precio por noche y dias");
+        verificar(aplicacion.habitacionControlador().buscarPorId(habitacionRecepcion.getId())
+                .getEstado() == EstadoHabitacion.OCUPADA,
+                "La recepcion debe registrar check-in y ocupar la habitacion");
+        Cliente clienteActualizado = aplicacion.clienteControlador()
+                .buscarPorDocumento("DOC-TX").orElseThrow();
+        verificar("Cliente Transaccional Actualizado".equals(clienteActualizado.getNombreCompleto()),
+                "La recepcion debe actualizar datos del cliente existente por DNI");
+        Reserva recepcionFinalizada = aplicacion.reservaControlador().registrarCheckOut(
+                reservaRecepcion.getId());
+        verificar(recepcionFinalizada.getEstado() == EstadoReserva.FINALIZADA,
+                "El check-out de recepcion debe finalizar la reserva");
+
+        aplicacion.autenticacionControlador().cerrarSesion();
 
         HabitacionControlador habitacionControlador = new HabitacionControlador(
                 new HabitacionServicioImpl(habitaciones, sesion));

@@ -19,6 +19,12 @@ public interface ClienteServicio {
             String telefono
     );
 
+    Cliente guardarOActualizarPorDocumento(
+            String nombreCompleto,
+            String documentoIdentidad,
+            String telefono
+    );
+
     boolean actualizar(Cliente cliente);
 
     boolean eliminar(int id);

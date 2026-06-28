@@ -41,8 +41,54 @@ public final class ReservaControlador {
         );
     }
 
+    public Reserva registrarRecepcion(
+            String nombreCompleto,
+            String documentoIdentidad,
+            String telefono,
+            int habitacionId,
+            LocalDateTime ingreso,
+            LocalDateTime salida
+    ) {
+        return servicio.registrarRecepcion(
+                nombreCompleto,
+                documentoIdentidad,
+                telefono,
+                habitacionId,
+                ingreso,
+                salida
+        );
+    }
+
+    public Reserva registrarRecepcion(
+            String nombreCompleto,
+            String documentoIdentidad,
+            String telefono,
+            int habitacionId,
+            LocalDateTime ingreso,
+            LocalDateTime salida,
+            BigDecimal totalPagado
+    ) {
+        return servicio.registrarRecepcion(
+                nombreCompleto,
+                documentoIdentidad,
+                telefono,
+                habitacionId,
+                ingreso,
+                salida,
+                totalPagado
+        );
+    }
+
     public Reserva registrarPago(int id, BigDecimal monto) {
         return servicio.registrarPago(id, monto);
+    }
+
+    public Reserva registrarCheckIn(int id) {
+        return servicio.registrarCheckIn(id);
+    }
+
+    public Reserva registrarCheckOut(int id) {
+        return servicio.registrarCheckOut(id);
     }
 
     public Reserva cancelar(int id) {

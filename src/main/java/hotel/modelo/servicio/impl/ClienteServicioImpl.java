@@ -70,6 +70,35 @@ public final class ClienteServicioImpl implements ClienteServicio {
     }
 
     @Override
+    public Cliente guardarOActualizarPorDocumento(
+            String nombreCompleto,
+            String documentoIdentidad,
+            String telefono
+    ) {
+        Optional<Cliente> existente = clienteDAO.buscarPorDocumento(documentoIdentidad);
+        if (existente.isEmpty()) {
+            return crear(nombreCompleto, documentoIdentidad, telefono);
+        }
+
+        Cliente cliente = existente.orElseThrow();
+        Cliente actualizado = new Cliente(
+                cliente.getId(),
+                proveedorHotelId.getHotelId(),
+                nombreCompleto,
+                documentoIdentidad,
+                telefono
+        );
+
+        if (!clienteDAO.actualizar(actualizado)) {
+            throw new EntidadNoEncontradaException(
+                    "El cliente dejo de existir durante la actualizacion"
+            );
+        }
+
+        return actualizado;
+    }
+
+    @Override
     public boolean actualizar(Cliente cliente) {
         Objects.requireNonNull(cliente, "cliente es obligatorio");
         return clienteDAO.actualizar(cliente);

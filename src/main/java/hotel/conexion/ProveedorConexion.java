@@ -7,4 +7,8 @@ import java.sql.SQLException;
 public interface ProveedorConexion {
 
     Connection obtenerConexion() throws SQLException;
+
+    default void liberarConexion(Connection conexion) throws SQLException {
+        conexion.close();
+    }
 }

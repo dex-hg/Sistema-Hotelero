@@ -20,7 +20,30 @@ public interface ReservaServicio {
             BigDecimal totalPagado
     );
 
+    Reserva registrarRecepcion(
+            String nombreCompleto,
+            String documentoIdentidad,
+            String telefono,
+            int habitacionId,
+            LocalDateTime fechaIngreso,
+            LocalDateTime fechaSalida
+    );
+
+    Reserva registrarRecepcion(
+            String nombreCompleto,
+            String documentoIdentidad,
+            String telefono,
+            int habitacionId,
+            LocalDateTime fechaIngreso,
+            LocalDateTime fechaSalida,
+            BigDecimal totalPagado
+    );
+
     Reserva registrarPago(int reservaId, BigDecimal monto);
+
+    Reserva registrarCheckIn(int reservaId);
+
+    Reserva registrarCheckOut(int reservaId);
 
     Reserva cancelar(int reservaId);
 
