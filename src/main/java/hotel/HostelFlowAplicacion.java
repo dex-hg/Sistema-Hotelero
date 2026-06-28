@@ -10,6 +10,6 @@ public final class HostelFlowAplicacion {
 
     public static void main(String[] args) {
         ComposicionAplicacion aplicacion = new ComposicionAplicacion();
-        new VistaSwing(aplicacion).iniciar();
+        new VistaSwing(aplicacion).iniciar(); 
     }
 }
