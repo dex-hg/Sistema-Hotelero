@@ -6,6 +6,16 @@ import hotel.modelo.entidades.constantes.TipoHabitacion;
 
 import java.math.BigDecimal;
 
+/**
+ * Constructor fluido (Builder) para crear instancias de {@link Habitacion}.
+ * Facilita la creación paso a paso de habitaciones con valores por defecto o
+ * configuraciones personalizadas.
+ *
+ * PATRÓN DE DISEÑO: - Builder: Separa la construcción del objeto complejo
+ * {@code Habitacion} de su inicialización, evitando la necesidad de tener
+ * múltiples constructores sobrecargados (telescopios) y haciendo que la
+ * construcción en los clientes sea mucho más legible, clara y autodocumentada.
+ */
 public final class HabitacionBuilder {
 
     private Integer id;
@@ -16,6 +26,7 @@ public final class HabitacionBuilder {
     private int cantidadCamas;
     private boolean banoPrivado;
     private boolean tv;
+
     private EstadoHabitacion estado = EstadoHabitacion.DISPONIBLE;
 
     public HabitacionBuilder conId(Integer id) {

@@ -34,16 +34,33 @@ public final class PanelClientes extends JPanel {
         tabla.setAutoCreateRowSorter(true);
 
         JButton refrescar = new JButton("Refrescar");
-        refrescar.addActionListener(e -> VistaUtil.ejecutar(this, this::refrescar));
+        refrescar.addActionListener(
+                e -> VistaUtil.ejecutar(
+                        this,
+                        this::refrescar
+                )
+        );
 
         JButton crear = new JButton("Crear");
-        crear.addActionListener(e -> VistaUtil.ejecutar(this, this::crear));
+        crear.addActionListener(
+                e -> VistaUtil.ejecutar(
+                        this,
+                        this::crear
+                )
+        );
 
         JPanel acciones = new JPanel();
         acciones.add(refrescar);
         acciones.add(crear);
 
-        setBorder(javax.swing.BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        setBorder(
+                javax.swing.BorderFactory.createEmptyBorder(
+                        12,
+                        12,
+                        12,
+                        12
+                )
+        );
         add(acciones, BorderLayout.NORTH);
         add(new JScrollPane(tabla), BorderLayout.CENTER);
     }

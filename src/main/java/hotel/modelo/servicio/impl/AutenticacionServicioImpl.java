@@ -11,6 +11,13 @@ import hotel.excepcion.ReglaNegocioException;
 
 import java.util.Objects;
 
+/**
+ * Servicio de autenticacion y ciclo de sesion.
+ *
+ * APLICA PRINCIPIO SOLID: - SRP: concentra validacion de credenciales e
+ * inicio/cierre de sesion. - DIP: usa {@link AutenticacionUsuarioDAO} y
+ * {@link HotelDAO} como abstracciones de lectura, sin acoplarse a JDBC.
+ */
 public final class AutenticacionServicioImpl implements AutenticacionServicio {
 
     private final AutenticacionUsuarioDAO autenticacionUsuarioDAO;
@@ -42,7 +49,9 @@ public final class AutenticacionServicioImpl implements AutenticacionServicio {
             String password
     ) {
         if (rucHotel == null || rucHotel.isBlank()) {
-            throw new ReglaNegocioException("Ingrese el RUC del hotel");
+            throw new ReglaNegocioException(
+                    "Ingrese el RUC del hotel"
+            );
         }
 
         int hotelId = hotelDAO.buscarPorRuc(rucHotel.trim())
@@ -70,8 +79,8 @@ public final class AutenticacionServicioImpl implements AutenticacionServicio {
         Usuario usuario = autenticacionUsuarioDAO
                 .buscarPorHotelYUsername(hotelId, username.trim())
                 .orElseThrow(() -> new ReglaNegocioException(
-                    "Credenciales invalidas"
-                    )
+                "Credenciales invalidas"
+        )
                 );
 
         if (!usuario.getPassword().equals(password)) {

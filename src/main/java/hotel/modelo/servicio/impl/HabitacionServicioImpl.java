@@ -18,6 +18,13 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+/**
+ * Servicio de negocio de habitaciones.
+ *
+ * APLICA PRINCIPIO SOLID: - SRP: valida reglas de habitaciones y coordina el
+ * DAO, sin manejar SQL ni UI. - DIP: depende de la abstraccion
+ * {@link HabitacionDAO}, no de JDBC directo.
+ */
 public final class HabitacionServicioImpl implements HabitacionServicio {
 
     private final HabitacionDAO habitacionDAO;
@@ -117,13 +124,21 @@ public final class HabitacionServicioImpl implements HabitacionServicio {
         return cambiarEstado(id, Habitacion::enviarAMantenimiento);
     }
 
+    /**
+     * Aplica una transicion del patron State y persiste el estado resultante.
+     *
+     * PATRON DE DISENO: - State: la validez de la transicion vive en la
+     * entidad/estado concreto; el servicio solo coordina la busqueda y
+     * guardado.
+     */
     private Habitacion cambiarEstado(int id, Consumer<Habitacion> transicion) {
         Habitacion habitacion = buscarPorId(id);
         transicion.accept(habitacion);
 
         if (!habitacionDAO.actualizar(habitacion)) {
             throw new EntidadNoEncontradaException(
-                    "La habitacion dejo de existir durante la actualizacion"
+                    "La habitacion dejo de existir "
+                    + "durante la actualizacion"
             );
         }
         return habitacion;

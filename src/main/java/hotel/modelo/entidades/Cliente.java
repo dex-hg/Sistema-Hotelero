@@ -16,13 +16,21 @@ public final class Cliente {
             String telefono) {
 
         if (hotelId <= 0) {
-            throw new IllegalArgumentException("hotelId debe ser positivo");
+            throw new IllegalArgumentException(
+                    "hotelId debe ser positivo"
+            );
         }
 
         this.id = id;
         this.hotelId = hotelId;
-        this.nombreCompleto = textoObligatorio(nombreCompleto, "nombreCompleto");
-        this.documentoIdentidad = textoObligatorio(documentoIdentidad, "documentoIdentidad");
+        this.nombreCompleto = textoObligatorio(
+                nombreCompleto,
+                "nombreCompleto"
+        );
+        this.documentoIdentidad = textoObligatorio(
+                documentoIdentidad,
+                "documentoIdentidad"
+        );
         this.telefono = telefono;
     }
 
@@ -30,6 +38,7 @@ public final class Cliente {
         if (valor == null || valor.isBlank()) {
             throw new IllegalArgumentException(campo + " es obligatorio");
         }
+
         return valor.trim();
     }
 

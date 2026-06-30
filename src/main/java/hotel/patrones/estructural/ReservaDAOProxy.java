@@ -11,6 +11,23 @@ import java.util.Optional;
 
 import hotel.excepcion.AccesoTenantException;
 
+/**
+ * Proxy de seguridad y aislamiento multi-tenant para {@link ReservaDAO}.
+ * Intercepta todas las llamadas al DAO real para asegurar que el usuario solo
+ * acceda a reservas que pertenecen a su hotel (tenant activo).
+ *
+ * PATRÓN DE DISEÑO: - Proxy: Actúa como un proxy de protección (Protection
+ * Proxy), controlando el acceso a los métodos del DAO real mediante
+ * verificaciones de seguridad.
+ *
+ * APLICA PRINCIPIO SOLID: - LSP (Liskov Substitution Principle): Esta clase
+ * implementa la interfaz {@link ReservaDAO} y puede sustituir transparentemente
+ * a la implementación real ({@code ReservaDAOJdbc}) en cualquier cliente que
+ * dependa de la interfaz, sin alterar la semántica básica de los métodos. - SRP
+ * (Single Responsibility Principle): Su única responsabilidad es aplicar y
+ * garantizar la seguridad y aislamiento multi-tenant del acceso a base de
+ * datos.
+ */
 public final class ReservaDAOProxy implements ReservaDAO {
 
     private final ReservaDAO daoReal;

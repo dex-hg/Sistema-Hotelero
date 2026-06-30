@@ -22,7 +22,10 @@ public final class Hotel {
         this.nombre = textoObligatorio(nombre, "nombre");
         this.ruc = textoObligatorio(ruc, "ruc");
         this.direccion = direccion;
-        this.creadoEn = Objects.requireNonNull(creadoEn, "creadoEn es obligatorio");
+        this.creadoEn = Objects.requireNonNull(
+                creadoEn,
+                "creadoEn es obligatorio"
+        );
     }
 
     private static String textoObligatorio(String valor, String campo) {

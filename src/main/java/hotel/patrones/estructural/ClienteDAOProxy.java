@@ -11,6 +11,18 @@ import java.util.Optional;
 
 import hotel.excepcion.AccesoTenantException;
 
+/**
+ * Proxy de proteccion para {@link ClienteDAO}.
+ *
+ * PATRON DE DISENO:
+ * - Proxy: intercepta el acceso al DAO real y valida que exista sesion y que
+ *   las entidades pertenezcan al hotel activo antes de delegar.
+ *
+ * APLICA PRINCIPIO SOLID:
+ * - LSP: puede usarse donde se espera un {@link ClienteDAO} sin cambiar el
+ *   contrato de los metodos.
+ * - SRP: su unica responsabilidad es proteger el limite multi-tenant.
+ */
 public final class ClienteDAOProxy implements ClienteDAO {
 
     private final ClienteDAO daoReal;

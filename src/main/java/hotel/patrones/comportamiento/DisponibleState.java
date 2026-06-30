@@ -2,6 +2,12 @@ package hotel.patrones.comportamiento;
 
 import hotel.modelo.entidades.constantes.EstadoHabitacion;
 
+/**
+ * Estado disponible de una habitacion.
+ *
+ * PATRON DE DISENO: - State: define solo las transiciones permitidas desde
+ * DISPONIBLE.
+ */
 public final class DisponibleState implements EstadoHabitacionState {
 
     @Override

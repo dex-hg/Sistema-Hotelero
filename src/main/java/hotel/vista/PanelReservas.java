@@ -1,6 +1,7 @@
 package hotel.vista;
 
 import hotel.controlador.ReservaControlador;
+
 import hotel.modelo.entidades.Reserva;
 
 import javax.swing.JButton;
@@ -37,28 +38,68 @@ public final class PanelReservas extends JPanel {
         tabla.setAutoCreateRowSorter(true);
 
         JButton refrescar = new JButton("Refrescar");
-        refrescar.addActionListener(e -> VistaUtil.ejecutar(this, this::refrescar));
+        refrescar.addActionListener(
+                e -> VistaUtil.ejecutar(
+                        this,
+                        this::refrescar
+                )
+        );
 
         JButton crear = new JButton("Crear");
-        crear.addActionListener(e -> VistaUtil.ejecutar(this, this::crear));
+        crear.addActionListener(
+                e -> VistaUtil.ejecutar(
+                        this,
+                        this::crear
+                )
+        );
 
         JButton pago = new JButton("Registrar pago");
-        pago.addActionListener(e -> VistaUtil.ejecutar(this, this::registrarPago));
+        pago.addActionListener(
+                e -> VistaUtil.ejecutar(
+                        this,
+                        this::registrarPago
+                )
+        );
 
         JButton checkIn = new JButton("Check-in");
-        checkIn.addActionListener(e -> VistaUtil.ejecutar(this, this::registrarCheckIn));
+        checkIn.addActionListener(
+                e -> VistaUtil.ejecutar(
+                        this,
+                        this::registrarCheckIn
+                )
+        );
 
         JButton checkOut = new JButton("Check-out");
-        checkOut.addActionListener(e -> VistaUtil.ejecutar(this, this::registrarCheckOut));
+        checkOut.addActionListener(
+                e -> VistaUtil.ejecutar(
+                        this,
+                        this::registrarCheckOut
+                )
+        );
 
         JButton cancelar = new JButton("Cancelar");
-        cancelar.addActionListener(e -> VistaUtil.ejecutar(this, this::cancelar));
+        cancelar.addActionListener(
+                e -> VistaUtil.ejecutar(
+                        this,
+                        this::cancelar
+                )
+        );
 
         JButton finalizar = new JButton("Finalizar");
-        finalizar.addActionListener(e -> VistaUtil.ejecutar(this, this::finalizar));
+        finalizar.addActionListener(
+                e -> VistaUtil.ejecutar(
+                        this,
+                        this::finalizar
+                )
+        );
 
         JButton eliminar = new JButton("Eliminar");
-        eliminar.addActionListener(e -> VistaUtil.ejecutar(this, this::eliminar));
+        eliminar.addActionListener(
+                e -> VistaUtil.ejecutar(
+                        this,
+                        this::eliminar
+                )
+        );
 
         JPanel acciones = new JPanel();
         acciones.add(refrescar);
@@ -70,9 +111,19 @@ public final class PanelReservas extends JPanel {
         acciones.add(finalizar);
         acciones.add(eliminar);
 
-        setBorder(javax.swing.BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        setBorder(
+                javax.swing.BorderFactory.createEmptyBorder(
+                        12,
+                        12,
+                        12,
+                        12
+                )
+        );
         add(acciones, BorderLayout.NORTH);
-        add(new JScrollPane(tabla), BorderLayout.CENTER);
+        add(
+                new JScrollPane(tabla),
+                BorderLayout.CENTER
+        );
     }
 
     private void refrescar() {
@@ -82,8 +133,12 @@ public final class PanelReservas extends JPanel {
                 reserva.getId(),
                 reserva.getHabitacionId(),
                 reserva.getClienteId(),
-                VistaUtil.FORMATO_FECHA.format(reserva.getFechaIngreso()),
-                VistaUtil.FORMATO_FECHA.format(reserva.getFechaSalida()),
+                VistaUtil.FORMATO_FECHA.format(
+                reserva.getFechaIngreso()
+                ),
+                VistaUtil.FORMATO_FECHA.format(
+                reserva.getFechaSalida()
+                ),
                 reserva.getTotalPagado(),
                 reserva.getEstado()
             });
@@ -122,7 +177,12 @@ public final class PanelReservas extends JPanel {
     private void registrarPago() {
         reservas.registrarPago(
                 pedirReservaId(),
-                VistaUtil.decimal(VistaUtil.pedirTexto(this, "Monto"))
+                VistaUtil.decimal(
+                        VistaUtil.pedirTexto(
+                                this,
+                                "Monto"
+                        )
+                )
         );
         refrescar();
     }
@@ -153,6 +213,11 @@ public final class PanelReservas extends JPanel {
     }
 
     private int pedirReservaId() {
-        return VistaUtil.entero(VistaUtil.pedirTexto(this, "Reserva ID"));
+        return VistaUtil.entero(
+                VistaUtil.pedirTexto(
+                        this,
+                        "Reserva ID"
+                )
+        );
     }
 }

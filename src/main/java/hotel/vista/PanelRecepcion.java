@@ -3,6 +3,7 @@ package hotel.vista;
 import hotel.controlador.ClienteControlador;
 import hotel.controlador.HabitacionControlador;
 import hotel.controlador.ReservaControlador;
+
 import hotel.modelo.entidades.Cliente;
 import hotel.modelo.entidades.Habitacion;
 import hotel.modelo.entidades.Reserva;
@@ -39,14 +40,29 @@ public final class PanelRecepcion extends JPanel {
     private final JTextField nombre = VistaUtil.campo("");
     private final JTextField telefono = VistaUtil.campo("");
     private final JComboBox<ItemHabitacion> habitacion = new JComboBox<>();
-    private final JTextField ingreso = VistaUtil.campo("2026-07-01 14:00");
-    private final JTextField salida = VistaUtil.campo("2026-07-02 12:00");
-    private final JTextField totalCalculado = VistaUtil.campo("0.00");
-    private final JTextField reservaCheckOut = VistaUtil.campo("");
+
+    private final JTextField ingreso = VistaUtil.campo(
+            "2026-07-01 14:00"
+    );
+    private final JTextField salida = VistaUtil.campo(
+            "2026-07-02 12:00"
+    );
+    private final JTextField totalCalculado = VistaUtil.campo(
+            "0.00"
+    );
+    private final JTextField reservaCheckOut = VistaUtil.campo(
+            ""
+    );
 
     private final DefaultTableModel modeloReservas = new DefaultTableModel(
             new Object[]{
-                "ID", "Habitacion", "Cliente", "Ingreso", "Salida", "Pagado", "Estado"
+                "ID",
+                "Habitacion",
+                "Cliente",
+                "Ingreso",
+                "Salida",
+                "Pagado",
+                "Estado"
             },
             0
     );
@@ -71,32 +87,105 @@ public final class PanelRecepcion extends JPanel {
         c.fill = GridBagConstraints.HORIZONTAL;
         c.weightx = 1;
 
-        agregarCampo(formulario, c, 0, 0, "DNI", documento);
-        agregarCampo(formulario, c, 0, 2, "Nombre completo", nombre);
-        agregarCampo(formulario, c, 1, 0, "Telefono", telefono);
-        agregarCampo(formulario, c, 1, 2, "Habitacion disponible", habitacion);
-        agregarCampo(formulario, c, 2, 0, "Ingreso", ingreso);
-        agregarCampo(formulario, c, 2, 2, "Salida", salida);
+        agregarCampo(
+                formulario,
+                c,
+                0,
+                0,
+                "DNI",
+                documento
+        );
+        agregarCampo(
+                formulario,
+                c,
+                0,
+                2,
+                "Nombre completo",
+                nombre
+        );
+        agregarCampo(
+                formulario,
+                c,
+                1,
+                0,
+                "Telefono",
+                telefono
+        );
+        agregarCampo(
+                formulario,
+                c,
+                1,
+                2,
+                "Habitacion disponible",
+                habitacion
+        );
+        agregarCampo(
+                formulario,
+                c,
+                2,
+                0,
+                "Ingreso",
+                ingreso
+        );
+        agregarCampo(
+                formulario,
+                c,
+                2,
+                2,
+                "Salida",
+                salida
+        );
         totalCalculado.setEditable(false);
-        agregarCampo(formulario, c, 3, 0, "Total calculado", totalCalculado);
+        agregarCampo(
+                formulario,
+                c,
+                3,
+                0,
+                "Total calculado",
+                totalCalculado
+        );
         configurarActualizacionTotal();
 
         JButton buscarDni = new JButton("Buscar DNI");
-        buscarDni.addActionListener(e -> VistaUtil.ejecutar(this, this::buscarCliente));
+        buscarDni.addActionListener(
+                e -> VistaUtil.ejecutar(
+                        this,
+                        this::buscarCliente
+                )
+        );
 
         JButton registrar = new JButton("Registrar check-in");
-        registrar.addActionListener(e -> VistaUtil.ejecutar(this, this::registrarCheckIn));
+        registrar.addActionListener(
+                e -> VistaUtil.ejecutar(
+                        this,
+                        this::registrarCheckIn
+                )
+        );
 
         JButton refrescar = new JButton("Refrescar");
-        refrescar.addActionListener(e -> VistaUtil.ejecutar(this, this::refrescar));
+        refrescar.addActionListener(
+                e -> VistaUtil.ejecutar(
+                        this,
+                        this::refrescar
+                )
+        );
 
         JPanel accionesRegistro = new JPanel();
         accionesRegistro.add(buscarDni);
         accionesRegistro.add(registrar);
         accionesRegistro.add(refrescar);
 
-        JPanel registro = new JPanel(new BorderLayout(8, 8));
-        registro.setBorder(javax.swing.BorderFactory.createTitledBorder("Registro de huesped"));
+        JPanel registro = new JPanel(
+                new BorderLayout(
+                        8,
+                        8
+                )
+        );
+        registro.setBorder(
+                javax.swing.BorderFactory.createTitledBorder(
+                        "Registro de huesped"
+                )
+        );
         registro.add(formulario, BorderLayout.CENTER);
         registro.add(accionesRegistro, BorderLayout.SOUTH);
 
@@ -104,19 +193,50 @@ public final class PanelRecepcion extends JPanel {
         tabla.setAutoCreateRowSorter(true);
 
         JButton checkOut = new JButton("Registrar check-out");
-        checkOut.addActionListener(e -> VistaUtil.ejecutar(this, this::registrarCheckOut));
+        checkOut.addActionListener(
+                e -> VistaUtil.ejecutar(
+                        this,
+                        this::registrarCheckOut
+                )
+        );
 
         JPanel salidaPanel = new JPanel();
-        salidaPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Salida"));
-        salidaPanel.add(new JLabel("Reserva ID"));
+        salidaPanel.setBorder(
+                javax.swing.BorderFactory.createTitledBorder(
+                        "Salida"
+                )
+        );
+        salidaPanel.add(
+                new JLabel(
+                        "Reserva ID"
+                )
+        );
         salidaPanel.add(reservaCheckOut);
         salidaPanel.add(checkOut);
 
-        JPanel centro = new JPanel(new BorderLayout(8, 8));
-        centro.add(new JScrollPane(tabla), BorderLayout.CENTER);
-        centro.add(salidaPanel, BorderLayout.SOUTH);
+        JPanel centro = new JPanel(
+                new BorderLayout(
+                        8,
+                        8
+                )
+        );
+        centro.add(
+                new JScrollPane(tabla),
+                BorderLayout.CENTER
+        );
+        centro.add(
+                salidaPanel,
+                BorderLayout.SOUTH
+        );
 
-        setBorder(javax.swing.BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        setBorder(
+                javax.swing.BorderFactory.createEmptyBorder(
+                        12,
+                        12,
+                        12,
+                        12
+                )
+        );
         add(registro, BorderLayout.NORTH);
         add(centro, BorderLayout.CENTER);
     }
@@ -131,7 +251,12 @@ public final class PanelRecepcion extends JPanel {
     ) {
         c.gridy = fila * 2;
         c.gridx = columna;
-        formulario.add(new JLabel(etiqueta), c);
+        formulario.add(
+                new JLabel(
+                        etiqueta
+                ),
+                c
+        );
 
         c.gridy = fila * 2 + 1;
         c.gridx = columna;
@@ -144,19 +269,28 @@ public final class PanelRecepcion extends JPanel {
         clientes.buscarPorDocumento(documento.getText())
                 .ifPresentOrElse(cliente -> {
                     nombre.setText(cliente.getNombreCompleto());
-                    telefono.setText(cliente.getTelefono() == null ? "" : cliente.getTelefono());
+                    telefono.setText(
+                            cliente.getTelefono() == null ? ""
+                            : cliente.getTelefono()
+                    );
                 }, () -> javax.swing.JOptionPane.showMessageDialog(
                 this,
-                "No hay cliente registrado con ese DNI. Complete sus datos.",
+                "No hay cliente registrado con ese DNI. "
+                + "Complete sus datos.",
                 "Cliente nuevo",
                 javax.swing.JOptionPane.INFORMATION_MESSAGE
         ));
     }
 
     private void registrarCheckIn() {
-        ItemHabitacion item = (ItemHabitacion) habitacion.getSelectedItem();
+        ItemHabitacion item
+                = (ItemHabitacion) habitacion.getSelectedItem();
+
         if (item == null) {
-            throw new IllegalArgumentException("No hay habitaciones disponibles para registrar check-in");
+            throw new IllegalArgumentException(
+                    "No hay habitaciones disponibles "
+                    + "para registrar check-in"
+            );
         }
 
         reservas.registrarRecepcion(
@@ -173,7 +307,12 @@ public final class PanelRecepcion extends JPanel {
     }
 
     private void registrarCheckOut() {
-        reservas.registrarCheckOut(VistaUtil.entero(reservaCheckOut.getText()));
+        reservas.registrarCheckOut(
+                VistaUtil.entero(
+                        reservaCheckOut.getText()
+                )
+        );
+
         reservaCheckOut.setText("");
         refrescar();
     }
@@ -204,8 +343,12 @@ public final class PanelRecepcion extends JPanel {
                 reserva.getId(),
                 reserva.getHabitacionId(),
                 reserva.getClienteId(),
-                VistaUtil.FORMATO_FECHA.format(reserva.getFechaIngreso()),
-                VistaUtil.FORMATO_FECHA.format(reserva.getFechaSalida()),
+                VistaUtil.FORMATO_FECHA.format(
+                reserva.getFechaIngreso()
+                ),
+                VistaUtil.FORMATO_FECHA.format(
+                reserva.getFechaSalida()
+                ),
                 reserva.getTotalPagado(),
                 reserva.getEstado()
             });
@@ -251,8 +394,12 @@ public final class PanelRecepcion extends JPanel {
         }
 
         try {
-            LocalDateTime fechaIngreso = VistaUtil.fecha(ingreso.getText());
-            LocalDateTime fechaSalida = VistaUtil.fecha(salida.getText());
+            LocalDateTime fechaIngreso = VistaUtil.fecha(
+                    ingreso.getText()
+            );
+            LocalDateTime fechaSalida = VistaUtil.fecha(
+                    salida.getText()
+            );
             long dias = ChronoUnit.DAYS.between(
                     fechaIngreso.toLocalDate(),
                     fechaSalida.toLocalDate()
@@ -260,9 +407,14 @@ public final class PanelRecepcion extends JPanel {
             long diasFacturables = Math.max(1, dias);
 
             totalCalculado.setText(
-                    item.precioPorNoche.multiply(BigDecimal.valueOf(diasFacturables))
-                            .toPlainString()
+                    item.precioPorNoche.multiply(
+                            BigDecimal.valueOf(
+                                    diasFacturables
+                            )
+                    )
+                    .toPlainString()
             );
+            
         } catch (RuntimeException e) {
             totalCalculado.setText("Fecha invalida");
         }

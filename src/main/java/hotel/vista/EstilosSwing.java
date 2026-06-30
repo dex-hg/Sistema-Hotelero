@@ -17,8 +17,12 @@ public final class EstilosSwing {
             UIManager.put("Component.arc", 12);
             UIManager.put("ProgressBar.arc", 12);
             UIManager.put("TextComponent.arc", 12);
+
         } catch (UnsupportedLookAndFeelException e) {
-            throw new IllegalStateException("No se pudo aplicar FlatLaf", e);
+            throw new IllegalStateException(
+                    "No se pudo aplicar FlatLaf",
+                    e
+            );
         }
     }
 }

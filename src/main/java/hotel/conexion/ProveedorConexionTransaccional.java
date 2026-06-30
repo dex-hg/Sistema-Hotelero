@@ -63,7 +63,10 @@ public final class ProveedorConexionTransaccional
             }
 
         } catch (SQLException e) {
-            throw new DAOException("No se pudo ejecutar la transaccion", e);
+            throw new DAOException(
+                    "No se pudo ejecutar la transaccion",
+                    e
+            );
         }
     }
 }

@@ -1,9 +1,11 @@
 package hotel.vista;
 
 import hotel.controlador.HabitacionControlador;
+
 import hotel.modelo.entidades.Habitacion;
 import hotel.modelo.entidades.constantes.EstadoHabitacion;
 import hotel.modelo.entidades.constantes.TipoHabitacion;
+
 import hotel.patrones.creacional.HabitacionBuilder;
 
 import javax.swing.JButton;
@@ -29,8 +31,14 @@ public final class PanelHabitaciones extends JPanel {
     private final JComboBox<String> filtroTipo = new JComboBox<>();
     private final DefaultTableModel modelo = new DefaultTableModel(
             new Object[]{
-                "ID", "Numero", "Tipo", "Precio", "Camas",
-                "Bano privado", "TV", "Estado"
+                "ID",
+                "Numero",
+                "Tipo",
+                "Precio",
+                "Camas",
+                "Bano privado",
+                "TV",
+                "Estado"
             },
             0
     );
@@ -53,10 +61,24 @@ public final class PanelHabitaciones extends JPanel {
         cargarFiltros();
 
         JButton refrescar = new JButton("Refrescar");
-        refrescar.addActionListener(e -> VistaUtil.ejecutar(this, this::refrescar));
+        refrescar.addActionListener(
+                e -> VistaUtil.ejecutar(
+                        this,
+                        this::refrescar
+                )
+        );
 
-        filtroEstado.addActionListener(e -> VistaUtil.ejecutar(this, this::refrescar));
-        filtroTipo.addActionListener(e -> VistaUtil.ejecutar(this, this::refrescar));
+        filtroEstado.addActionListener(e -> VistaUtil.ejecutar(
+                this,
+                this::refrescar
+        )
+        );
+        filtroTipo.addActionListener(
+                e -> VistaUtil.ejecutar(
+                        this,
+                        this::refrescar
+                )
+        );
 
         JPanel acciones = new JPanel();
         acciones.add(new javax.swing.JLabel("Estado"));
@@ -67,22 +89,47 @@ public final class PanelHabitaciones extends JPanel {
 
         if (administrador) {
             JButton crear = new JButton("Crear");
-            crear.addActionListener(e -> VistaUtil.ejecutar(this, this::crear));
+            crear.addActionListener(
+                    e -> VistaUtil.ejecutar(
+                            this,
+                            this::crear
+                    )
+            );
 
             JButton modificar = new JButton("Modificar");
-            modificar.addActionListener(e -> VistaUtil.ejecutar(this, this::modificar));
+            modificar.addActionListener(
+                    e -> VistaUtil.ejecutar(
+                            this,
+                            this::modificar
+                    )
+            );
 
             JButton eliminar = new JButton("Eliminar");
-            eliminar.addActionListener(e -> VistaUtil.ejecutar(this, this::eliminar));
+            eliminar.addActionListener(
+                    e -> VistaUtil.ejecutar(
+                            this,
+                            this::eliminar
+                    )
+            );
 
             acciones.add(crear);
             acciones.add(modificar);
             acciones.add(eliminar);
         }
 
-        setBorder(javax.swing.BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        setBorder(
+                javax.swing.BorderFactory.createEmptyBorder(
+                        12,
+                        12,
+                        12,
+                        12
+                )
+        );
         add(acciones, BorderLayout.NORTH);
-        add(new JScrollPane(tabla), BorderLayout.CENTER);
+        add(
+                new JScrollPane(tabla),
+                BorderLayout.CENTER
+        );
     }
 
     private void cargarFiltros() {
@@ -119,15 +166,23 @@ public final class PanelHabitaciones extends JPanel {
     }
 
     private boolean coincideEstado(Habitacion habitacion) {
-        String seleccionado = String.valueOf(filtroEstado.getSelectedItem());
+        String seleccionado = String.valueOf(
+                filtroEstado.getSelectedItem()
+        );
         return TODOS.equals(seleccionado)
-                || habitacion.getEstado().name().equals(seleccionado);
+                || habitacion.getEstado().name().equals(
+                        seleccionado
+                );
     }
 
     private boolean coincideTipo(Habitacion habitacion) {
-        String seleccionado = String.valueOf(filtroTipo.getSelectedItem());
+        String seleccionado = String.valueOf(
+                filtroTipo.getSelectedItem()
+        );
         return TODOS.equals(seleccionado)
-                || habitacion.getTipo().name().equals(seleccionado);
+                || habitacion.getTipo().name().equals(
+                        seleccionado
+                );
     }
 
     private void crear() {
@@ -137,15 +192,24 @@ public final class PanelHabitaciones extends JPanel {
                 (TipoHabitacion) datos.tipo.getSelectedItem(),
                 VistaUtil.decimal(datos.precio.getText()),
                 VistaUtil.entero(datos.camas.getText()),
-                "Si".equals(datos.banoPrivado.getSelectedItem()),
-                "Si".equals(datos.tv.getSelectedItem())
+                "Si".equals(
+                        datos.banoPrivado.getSelectedItem()
+                ),
+                "Si".equals(
+                        datos.tv.getSelectedItem()
+                )
         );
         refrescar();
     }
 
     private void modificar() {
         Habitacion actual = habitaciones.buscarPorId(
-                VistaUtil.entero(VistaUtil.pedirTexto(this, "Habitacion ID"))
+                VistaUtil.entero(
+                        VistaUtil.pedirTexto(
+                                this,
+                                "Habitacion ID"
+                        )
+                )
         );
         DatosHabitacion datos = pedirDatos(actual);
 
@@ -154,8 +218,16 @@ public final class PanelHabitaciones extends JPanel {
                 .paraHotel(actual.getHotelId())
                 .conNumero(datos.numero.getText())
                 .deTipo((TipoHabitacion) datos.tipo.getSelectedItem())
-                .conPrecioPorNoche(VistaUtil.decimal(datos.precio.getText()))
-                .conCantidadCamas(VistaUtil.entero(datos.camas.getText()))
+                .conPrecioPorNoche(
+                        VistaUtil.decimal(
+                                datos.precio.getText()
+                        )
+                )
+                .conCantidadCamas(
+                        VistaUtil.entero(
+                                datos.camas.getText()
+                        )
+                )
                 .conEstado(actual.getEstado());
 
         if ("Si".equals(datos.banoPrivado.getSelectedItem())) {
@@ -170,7 +242,11 @@ public final class PanelHabitaciones extends JPanel {
     }
 
     private void eliminar() {
-        int id = VistaUtil.entero(VistaUtil.pedirTexto(this, "Habitacion ID"));
+        int id = VistaUtil.entero(
+                VistaUtil.pedirTexto(
+                        this,
+                        "Habitacion ID")
+        );
         habitaciones.eliminar(id);
         refrescar();
     }
@@ -180,7 +256,9 @@ public final class PanelHabitaciones extends JPanel {
 
         if (!VistaUtil.confirmarFormulario(
                 this,
-                habitacion == null ? "Crear habitacion" : "Modificar habitacion",
+                habitacion 
+                        == null 
+                        ? "Crear habitacion" : "Modificar habitacion",
                 "Numero", datos.numero,
                 "Tipo", datos.tipo,
                 "Precio", datos.precio,
@@ -204,7 +282,9 @@ public final class PanelHabitaciones extends JPanel {
         private final JComboBox<String> tv;
 
         private DatosHabitacion(Habitacion habitacion) {
-            numero = VistaUtil.campo(habitacion == null ? "" : habitacion.getNumero());
+            numero = VistaUtil.campo(
+                    habitacion == null ? "" : habitacion.getNumero()
+            );
             tipo = new JComboBox<>(TipoHabitacion.values());
             precio = VistaUtil.campo(habitacion == null
                     ? "0.00"
@@ -217,7 +297,9 @@ public final class PanelHabitaciones extends JPanel {
 
             if (habitacion != null) {
                 tipo.setSelectedItem(habitacion.getTipo());
-                banoPrivado.setSelectedItem(habitacion.tieneBanoPrivado() ? "Si" : "No");
+                banoPrivado.setSelectedItem(
+                        habitacion.tieneBanoPrivado() ? "Si" : "No"
+                );
                 tv.setSelectedItem(habitacion.tieneTv() ? "Si" : "No");
             }
         }

@@ -12,13 +12,20 @@ import hotel.dao.jdbc.*;
 
 import hotel.modelo.servicio.*;
 import hotel.modelo.servicio.impl.*;
-
 import hotel.modelo.sesion.ContextoSesion;
 
 import hotel.patrones.estructural.*;
 
 import java.util.Objects;
 
+/**
+ * Raiz de composicion de la aplicacion.
+ *
+ * APLICA PRINCIPIO SOLID: - DIP: arma el grafo de objetos conectando interfaces
+ * de DAO y servicios con sus implementaciones concretas en un unico lugar. -
+ * SRP: centraliza la configuracion de dependencias y evita que la UI o los
+ * controladores conozcan detalles de JDBC, Proxy o transacciones.
+ */
 public final class ComposicionAplicacion {
 
     private final ProveedorConexion proveedorConexion;
@@ -45,7 +52,10 @@ public final class ComposicionAplicacion {
     private final ReservaControlador reservaControlador;
 
     public ComposicionAplicacion() {
-        this(new ProveedorConexionTransaccional(new ConexionBD()), new ContextoSesion());
+        this(
+                new ProveedorConexionTransaccional(new ConexionBD()),
+                new ContextoSesion()
+        );
     }
 
     public ComposicionAplicacion(
@@ -55,7 +65,8 @@ public final class ComposicionAplicacion {
         this.proveedorConexion = prepararProveedorConexion(
                 Objects.requireNonNull(proveedorConexion)
         );
-        this.ejecutorTransaccional = (EjecutorTransaccional) this.proveedorConexion;
+        this.ejecutorTransaccional
+                = (EjecutorTransaccional) this.proveedorConexion;
 
         this.contextoSesion = Objects.requireNonNull(contextoSesion);
 
@@ -203,6 +214,8 @@ public final class ComposicionAplicacion {
             return (ProveedorConexion) transaccional;
         }
 
-        return new ProveedorConexionTransaccional(proveedorConexion);
+        return new ProveedorConexionTransaccional(
+                proveedorConexion
+        );
     }
 }

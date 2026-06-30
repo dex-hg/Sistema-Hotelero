@@ -1,7 +1,9 @@
 package hotel.vista;
 
 import hotel.configuracion.ComposicionAplicacion;
+
 import hotel.controlador.AutenticacionControlador;
+
 import hotel.modelo.entidades.Usuario;
 
 import javax.swing.BorderFactory;
@@ -32,7 +34,7 @@ public final class VentanaLogin extends JFrame {
     private final JPasswordField password = new JPasswordField(18);
 
     public VentanaLogin(ComposicionAplicacion aplicacion) {
-        super("HostelFlow SaaS");
+        super("HostelFlow");
         this.aplicacion = Objects.requireNonNull(aplicacion);
         this.autenticacion = aplicacion.autenticacionControlador();
         construir();
@@ -48,10 +50,12 @@ public final class VentanaLogin extends JFrame {
         setMinimumSize(new Dimension(570, 450));
         setLocationRelativeTo(null);
 
-        JLabel titulo = new JLabel("HostelFlow SaaS");
+        JLabel titulo = new JLabel("HostelFlow");
         titulo.setFont(titulo.getFont().deriveFont(Font.BOLD, 28f));
 
-        JLabel subtitulo = new JLabel("Inicia sesion con las credenciales de tu hotel");
+        JLabel subtitulo = new JLabel(
+                "Inicia sesion con las credenciales de tu hotel"
+        );
 
         JPanel encabezado = new JPanel(new BorderLayout(4, 4));
         encabezado.add(titulo, BorderLayout.NORTH);
@@ -63,19 +67,55 @@ public final class VentanaLogin extends JFrame {
         c.fill = GridBagConstraints.HORIZONTAL;
         c.weightx = 1;
 
-        agregarCampo(formulario, c, 0, "RUC del hotel", rucHotel);
-        agregarCampo(formulario, c, 2, "Usuario", username);
-        agregarCampo(formulario, c, 4, "Contraseña", password);
+        agregarCampo(
+                formulario,
+                c,
+                0,
+                "RUC del hotel",
+                rucHotel
+        );
+        agregarCampo(
+                formulario,
+                c,
+                2,
+                "Usuario",
+                username
+        );
+
+        agregarCampo(
+                formulario,
+                c,
+                4,
+                "Contraseña",
+                password
+        );
 
         JButton ingresar = new JButton("Iniciar sesion");
-        ingresar.addActionListener(e -> VistaUtil.ejecutar(this, this::iniciarSesion));
+        ingresar.addActionListener(
+                e -> VistaUtil.ejecutar(
+                        this,
+                        this::iniciarSesion
+                )
+        );
         getRootPane().setDefaultButton(ingresar);
 
         JPanel acciones = new JPanel(new BorderLayout());
         acciones.add(ingresar, BorderLayout.CENTER);
 
-        JPanel contenido = new JPanel(new BorderLayout(18, 18));
-        contenido.setBorder(BorderFactory.createEmptyBorder(28, 36, 28, 36));
+        JPanel contenido = new JPanel(
+                new BorderLayout(
+                        18,
+                        18
+                )
+        );
+        contenido.setBorder(
+                BorderFactory.createEmptyBorder(
+                        28,
+                        36,
+                        28,
+                        36
+                )
+        );
         contenido.add(encabezado, BorderLayout.NORTH);
         contenido.add(formulario, BorderLayout.CENTER);
         contenido.add(acciones, BorderLayout.SOUTH);

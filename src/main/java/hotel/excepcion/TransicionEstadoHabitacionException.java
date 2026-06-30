@@ -1,6 +1,7 @@
 package hotel.excepcion;
 
-public final class TransicionEstadoHabitacionException extends IllegalStateException {
+public final class TransicionEstadoHabitacionException 
+        extends IllegalStateException {
 
     private static final long serialVersionUID = 1L;
 

@@ -38,12 +38,8 @@ CREATE TABLE habitaciones (
         FOREIGN KEY (hotel_id) REFERENCES hoteles(id) ON DELETE CASCADE,
     CONSTRAINT uq_habitacion_por_hotel UNIQUE (hotel_id, numero),
     CONSTRAINT uq_habitacion_tenant_id UNIQUE (hotel_id, id),
-    CONSTRAINT chk_habitaciones_tipo
-        CHECK (tipo IN ('INDIVIDUAL', 'DOBLE', 'MATRIMONIAL', 'FAMILIAR')),
     CONSTRAINT chk_habitaciones_precio CHECK (precio_por_noche >= 0),
     CONSTRAINT chk_habitaciones_camas CHECK (cantidad_camas > 0),
-    CONSTRAINT chk_habitaciones_estado
-        CHECK (estado IN ('DISPONIBLE', 'OCUPADA', 'EN_LIMPIEZA', 'MANTENIMIENTO'))
 );
 
 CREATE TABLE clientes (
@@ -78,8 +74,6 @@ CREATE TABLE reservas (
     CONSTRAINT uq_reserva_tenant_id UNIQUE (hotel_id, id),
     CONSTRAINT chk_reservas_fechas CHECK (fecha_salida > fecha_ingreso),
     CONSTRAINT chk_reservas_total CHECK (total_pagado >= 0),
-    CONSTRAINT chk_reservas_estado
-        CHECK (estado_reserva IN ('ACTIVA', 'FINALIZADA', 'CANCELADA'))
 );
 
 CREATE INDEX idx_usuarios_hotel ON usuarios(hotel_id);

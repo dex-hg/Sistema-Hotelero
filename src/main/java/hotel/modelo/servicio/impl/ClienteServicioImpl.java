@@ -13,6 +13,13 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+/**
+ * Servicio de negocio de clientes.
+ *
+ * APLICA PRINCIPIO SOLID: - SRP: valida duplicados y actualizacion por
+ * documento, delegando persistencia a {@link ClienteDAO}. - DIP: trabaja contra
+ * la interfaz DAO y no contra una implementacion JDBC.
+ */
 public final class ClienteServicioImpl implements ClienteServicio {
 
     private final ClienteDAO clienteDAO;
@@ -75,9 +82,16 @@ public final class ClienteServicioImpl implements ClienteServicio {
             String documentoIdentidad,
             String telefono
     ) {
-        Optional<Cliente> existente = clienteDAO.buscarPorDocumento(documentoIdentidad);
+        Optional<Cliente> existente = clienteDAO.buscarPorDocumento(
+                documentoIdentidad
+        );
+
         if (existente.isEmpty()) {
-            return crear(nombreCompleto, documentoIdentidad, telefono);
+            return crear(
+                    nombreCompleto,
+                    documentoIdentidad,
+                    telefono
+            );
         }
 
         Cliente cliente = existente.orElseThrow();
@@ -91,7 +105,8 @@ public final class ClienteServicioImpl implements ClienteServicio {
 
         if (!clienteDAO.actualizar(actualizado)) {
             throw new EntidadNoEncontradaException(
-                    "El cliente dejo de existir durante la actualizacion"
+                    "El cliente dejo de existir "
+                    + "durante la actualizacion"
             );
         }
 
@@ -100,7 +115,11 @@ public final class ClienteServicioImpl implements ClienteServicio {
 
     @Override
     public boolean actualizar(Cliente cliente) {
-        Objects.requireNonNull(cliente, "cliente es obligatorio");
+        Objects.requireNonNull(
+                cliente,
+                "cliente es obligatorio"
+        );
+
         return clienteDAO.actualizar(cliente);
     }
 

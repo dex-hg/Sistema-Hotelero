@@ -1,7 +1,9 @@
 package hotel.vista;
 
 import hotel.configuracion.ComposicionAplicacion;
+
 import hotel.controlador.AutenticacionControlador;
+
 import hotel.modelo.entidades.Usuario;
 import hotel.modelo.entidades.constantes.RolUsuario;
 
@@ -24,8 +26,11 @@ public final class VentanaPrincipal extends JFrame {
     private final AutenticacionControlador autenticacion;
     private final Usuario usuario;
 
-    public VentanaPrincipal(ComposicionAplicacion aplicacion, Usuario usuario) {
-        super("HostelFlow SaaS");
+    public VentanaPrincipal(
+            ComposicionAplicacion aplicacion,
+            Usuario usuario
+    ) {
+        super("HostelFlow");
         this.aplicacion = Objects.requireNonNull(aplicacion);
         this.autenticacion = aplicacion.autenticacionControlador();
         this.usuario = Objects.requireNonNull(usuario);
@@ -43,17 +48,30 @@ public final class VentanaPrincipal extends JFrame {
         setLocationRelativeTo(null);
 
         JLabel titulo = new JLabel("HostelFlow SaaS");
-        titulo.setFont(titulo.getFont().deriveFont(Font.BOLD, 22f));
+        titulo.setFont(
+                titulo.getFont().deriveFont(
+                        Font.BOLD, 22f
+                )
+        );
 
-        JLabel sesion = new JLabel("Usuario: " + usuario.getUsername()
+        JLabel sesion = new JLabel(
+                "Usuario: " + usuario.getUsername()
                 + " | Hotel: " + usuario.getHotelId()
-                + " | Rol: " + usuario.getRol());
+                + " | Rol: " + usuario.getRol()
+        );
 
         JButton cerrarSesion = new JButton("Cerrar sesion");
         cerrarSesion.addActionListener(e -> cerrarSesion());
 
         JPanel encabezado = new JPanel(new BorderLayout(12, 12));
-        encabezado.setBorder(javax.swing.BorderFactory.createEmptyBorder(14, 18, 14, 18));
+        encabezado.setBorder(
+                javax.swing.BorderFactory.createEmptyBorder(
+                        14,
+                        18,
+                        14,
+                        18
+                )
+        );
         encabezado.add(titulo, BorderLayout.WEST);
         encabezado.add(sesion, BorderLayout.CENTER);
         encabezado.add(cerrarSesion, BorderLayout.EAST);
@@ -74,8 +92,16 @@ public final class VentanaPrincipal extends JFrame {
                     aplicacion.habitacionControlador(),
                     true
             ));
-            tabs.addTab("Clientes", new PanelClientes(aplicacion.clienteControlador()));
-            tabs.addTab("Reservas", new PanelReservas(aplicacion.reservaControlador()));
+
+            tabs.addTab("Clientes", new PanelClientes(
+                    aplicacion.clienteControlador()
+            )
+            );
+
+            tabs.addTab("Reservas", new PanelReservas(
+                    aplicacion.reservaControlador()
+            )
+            );
         }
 
         add(encabezado, BorderLayout.NORTH);

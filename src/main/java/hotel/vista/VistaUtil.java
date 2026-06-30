@@ -25,9 +25,16 @@ public final class VistaUtil {
         try {
             accion.run();
         } catch (NumberFormatException e) {
-            mostrarError(padre, "Ingrese un numero valido");
+            mostrarError(
+                    padre,
+                    "Ingrese un numero valido"
+            );
         } catch (DateTimeParseException e) {
-            mostrarError(padre, "Ingrese una fecha valida con formato yyyy-MM-dd HH:mm");
+            mostrarError(
+                    padre,
+                    "Ingrese una fecha valida "
+                    + "con formato yyyy-MM-dd HH:mm"
+            );
         } catch (IllegalArgumentException e) {
             mostrarError(padre, mensajeUsuario(e));
         } catch (RuntimeException e) {
@@ -40,9 +47,20 @@ public final class VistaUtil {
             String titulo,
             Object... campos
     ) {
-        JPanel panel = new JPanel(new GridLayout(0, 2, 10, 10));
+        JPanel panel = new JPanel(
+                new GridLayout(
+                        0,
+                        2,
+                        10,
+                        10
+                )
+        );
+
         for (int i = 0; i < campos.length; i += 2) {
-            panel.add(new javax.swing.JLabel(String.valueOf(campos[i])));
+            panel.add(new javax.swing.JLabel(
+                    String.valueOf(campos[i])
+            )
+            );
             panel.add((JComponent) campos[i + 1]);
         }
 
@@ -56,7 +74,11 @@ public final class VistaUtil {
     }
 
     public static String pedirTexto(Component padre, String etiqueta) {
-        String valor = JOptionPane.showInputDialog(padre, etiqueta);
+        String valor = JOptionPane.showInputDialog(
+                padre,
+                etiqueta
+        );
+
         if (valor == null) {
             throw new IllegalArgumentException("Operacion cancelada");
         }
@@ -67,6 +89,7 @@ public final class VistaUtil {
         if (valor == null || valor.isBlank()) {
             throw new NumberFormatException();
         }
+
         return Integer.parseInt(valor.trim());
     }
 
@@ -74,14 +97,23 @@ public final class VistaUtil {
         if (valor == null || valor.isBlank()) {
             throw new NumberFormatException();
         }
+
         return new BigDecimal(valor.trim());
     }
 
     public static LocalDateTime fecha(String valor) {
         if (valor == null || valor.isBlank()) {
-            throw new DateTimeParseException("Fecha vacia", "", 0);
+            throw new DateTimeParseException(
+                    "Fecha vacia",
+                    "",
+                    0
+           );
         }
-        return LocalDateTime.parse(valor.trim(), FORMATO_FECHA);
+
+        return LocalDateTime.parse(
+                valor.trim(),
+                FORMATO_FECHA
+        );
     }
 
     public static JTextField campo(String valorInicial) {
@@ -99,6 +131,7 @@ public final class VistaUtil {
 
     private static String mensajeUsuario(RuntimeException e) {
         String mensaje = e.getMessage();
+        
         if (mensaje == null || mensaje.isBlank()) {
             return "No se pudo completar la operacion";
         }
