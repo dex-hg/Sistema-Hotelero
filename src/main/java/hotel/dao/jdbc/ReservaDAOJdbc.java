@@ -2,25 +2,25 @@ package hotel.dao.jdbc;
 
 import hotel.conexion.ProveedorConexion;
 
-import hotel.excepcion.DAOException;
 import hotel.dao.ReservaDAO;
 
 import hotel.modelo.entidades.Reserva;
 import hotel.modelo.entidades.constantes.EstadoReserva;
 import hotel.modelo.sesion.ProveedorHotelId;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
-import java.sql.Timestamp;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+/**
+ * Implementacion JDBC de {@link ReservaDAO} para reservas del tenant activo.
+ *
+ * APLICA PRINCIPIO SOLID: - SRP: se limita a persistir reservas; las reglas de
+ * check-in, check-out y pagos permanecen en la capa de servicio.
+ */
 public final class ReservaDAOJdbc implements ReservaDAO {
 
     private static final String COLUMNAS
@@ -33,12 +33,16 @@ public final class ReservaDAOJdbc implements ReservaDAO {
             + "total_pagado, "
             + "estado_reserva";
 
-    private final ProveedorConexion proveedorConexion;
     private final ProveedorHotelId proveedorHotelId;
+    private final EjecutorDAO ejecutorDAO;
 
-    public ReservaDAOJdbc(ProveedorConexion proveedorConexion, ProveedorHotelId proveedorHotelId) {
-        this.proveedorConexion = Objects.requireNonNull(proveedorConexion);
+    public ReservaDAOJdbc(
+            ProveedorConexion proveedorConexion,
+            ProveedorHotelId proveedorHotelId
+    ) {
+        Objects.requireNonNull(proveedorConexion);
         this.proveedorHotelId = Objects.requireNonNull(proveedorHotelId);
+        this.ejecutorDAO = new EjecutorDAO(proveedorConexion);
     }
 
     @Override
@@ -46,28 +50,14 @@ public final class ReservaDAOJdbc implements ReservaDAO {
         String sql
                 = "SELECT "
                 + COLUMNAS
-                + " FROM reservas "
-                + "WHERE hotel_id = ? "
-                + "AND id = ?";
+                + " FROM reservas WHERE hotel_id = ? AND id = ?";
 
-        Connection conexion = null;
-        try {
-            conexion = proveedorConexion.obtenerConexion();
-            try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
-            sentencia.setInt(1, proveedorHotelId.getHotelId());
-            sentencia.setInt(2, id);
-
-            try (ResultSet resultado = sentencia.executeQuery()) {
-                return resultado.next() ? Optional.of(
-                        mapear(resultado)) : Optional.empty();
-            }
-            }
-
-        } catch (SQLException e) {
-            throw new DAOException("No se pudo buscar la reserva", e);
-        } finally {
-            liberarConexion(conexion);
-        }
+        return ejecutorDAO.consultarUno(
+                sql,
+                this::mapear,
+                proveedorHotelId.getHotelId(),
+                id
+        );
     }
 
     @Override
@@ -79,31 +69,11 @@ public final class ReservaDAOJdbc implements ReservaDAO {
                 + "WHERE hotel_id = ? "
                 + "ORDER BY fecha_ingreso DESC";
 
-        List<Reserva> reservas = new ArrayList<>();
-
-        Connection conexion = null;
-        try {
-            conexion = proveedorConexion.obtenerConexion();
-            try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
-            sentencia.setInt(1, proveedorHotelId.getHotelId());
-
-            try (ResultSet resultado = sentencia.executeQuery()) {
-                while (resultado.next()) {
-                    reservas.add(mapear(resultado));
-                }
-            }
-
-            return reservas;
-            }
-
-        } catch (SQLException e) {
-            throw new DAOException(
-                    "No se pudieron listar las reservas",
-                    e
-            );
-        } finally {
-            liberarConexion(conexion);
-        }
+        return ejecutorDAO.consultarLista(
+                sql,
+                this::mapear,
+                proveedorHotelId.getHotelId()
+        );
     }
 
     @Override
@@ -115,59 +85,26 @@ public final class ReservaDAOJdbc implements ReservaDAO {
                 + "total_pagado, estado_reserva) "
                 + "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
-        Connection conexion = null;
-        try {
-            conexion = proveedorConexion.obtenerConexion();
-            try (PreparedStatement sentencia = conexion.prepareStatement(
-                    sql,
-                    Statement.RETURN_GENERATED_KEYS
-            )) {
-            sentencia.setInt(1, proveedorHotelId.getHotelId());
-            sentencia.setInt(2, reserva.getHabitacionId());
-            sentencia.setInt(3, reserva.getClienteId());
-            sentencia.setTimestamp(
-                    4,
-                    Timestamp.valueOf(reserva.getFechaIngreso())
-            );
-            sentencia.setTimestamp(
-                    5, 
-                    Timestamp.valueOf(reserva.getFechaSalida())
-            );
-            sentencia.setBigDecimal(
-                    6, 
-                    reserva.getTotalPagado()
-            );
-            sentencia.setString(7, reserva.getEstado().name());
-            sentencia.executeUpdate();
+        int id = ejecutorDAO.crearYObtenerId(sql,
+                proveedorHotelId.getHotelId(),
+                reserva.getHabitacionId(),
+                reserva.getClienteId(),
+                reserva.getFechaIngreso(),
+                reserva.getFechaSalida(),
+                reserva.getTotalPagado(),
+                reserva.getEstado().name()
+        );
 
-            try (ResultSet claves = sentencia.getGeneratedKeys()) {
-                if (!claves.next()) {
-                    throw new DAOException(
-                            "PostgreSQL no devolvio el id de la reserva"
-                    );
-                }
-
-                return new Reserva(
-                        claves.getInt(1),
-                        proveedorHotelId.getHotelId(),
-                        reserva.getHabitacionId(),
-                        reserva.getClienteId(),
-                        reserva.getFechaIngreso(),
-                        reserva.getFechaSalida(),
-                        reserva.getTotalPagado(),
-                        reserva.getEstado()
-                );
-            }
-            }
-
-        } catch (SQLException e) {
-            throw new DAOException(
-                    "No se pudo crear la reserva",
-                    e
-            );
-        } finally {
-            liberarConexion(conexion);
-        }
+        return new Reserva(
+                id,
+                proveedorHotelId.getHotelId(),
+                reserva.getHabitacionId(),
+                reserva.getClienteId(),
+                reserva.getFechaIngreso(),
+                reserva.getFechaSalida(),
+                reserva.getTotalPagado(),
+                reserva.getEstado()
+        );
     }
 
     @Override
@@ -181,55 +118,31 @@ public final class ReservaDAOJdbc implements ReservaDAO {
                 + "WHERE hotel_id = ? "
                 + "AND id = ?";
 
-        Connection conexion = null;
-        try {
-            conexion = proveedorConexion.obtenerConexion();
-            try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
-            sentencia.setInt(1, reserva.getHabitacionId());
-            sentencia.setInt(2, reserva.getClienteId());
-            sentencia.setTimestamp(3,
-                    Timestamp.valueOf(
-                            reserva.getFechaIngreso())
-            );
-            sentencia.setTimestamp(4, Timestamp.valueOf(
-                    reserva.getFechaSalida())
-            );
-            sentencia.setBigDecimal(5, reserva.getTotalPagado());
-            sentencia.setString(6, reserva.getEstado().name());
-            sentencia.setInt(7, proveedorHotelId.getHotelId());
-            sentencia.setInt(8, reserva.getId());
-            
-            return sentencia.executeUpdate() == 1;
-            }
-            
-        } catch (SQLException e) {
-            throw new DAOException(
-                    "No se pudo actualizar la reserva", 
-                    e
-       );
-        } finally {
-            liberarConexion(conexion);
-        }
+        return ejecutorDAO.ejecutarModificacion(
+                sql,
+                reserva.getHabitacionId(),
+                reserva.getClienteId(),
+                reserva.getFechaIngreso(),
+                reserva.getFechaSalida(),
+                reserva.getTotalPagado(),
+                reserva.getEstado().name(),
+                proveedorHotelId.getHotelId(),
+                reserva.getId()
+        );
     }
 
     @Override
     public boolean eliminar(int id) {
-        String sql = "DELETE FROM reservas WHERE hotel_id = ? AND id = ?";
-        Connection conexion = null;
-        try {
-            conexion = proveedorConexion.obtenerConexion();
-            try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
-            sentencia.setInt(1, proveedorHotelId.getHotelId());
-            sentencia.setInt(2, id);
-            
-            return sentencia.executeUpdate() == 1;
-            }
-            
-        } catch (SQLException e) {
-            throw new DAOException("No se pudo eliminar la reserva", e);
-        } finally {
-            liberarConexion(conexion);
-        }
+        String sql
+                = "DELETE FROM reservas "
+                + "WHERE hotel_id = ? "
+                + "AND id = ?";
+
+        return ejecutorDAO.ejecutarModificacion(
+                sql,
+                proveedorHotelId.getHotelId(),
+                id
+        );
     }
 
     private Reserva mapear(ResultSet resultado) throws SQLException {
@@ -238,10 +151,14 @@ public final class ReservaDAOJdbc implements ReservaDAO {
                 resultado.getInt("hotel_id"),
                 resultado.getInt("habitacion_id"),
                 resultado.getInt("cliente_id"),
-                resultado.getTimestamp("fecha_ingreso").toLocalDateTime(),
-                resultado.getTimestamp("fecha_salida").toLocalDateTime(),
+                resultado.getTimestamp("fecha_ingreso")
+                        .toLocalDateTime(),
+                resultado.getTimestamp("fecha_salida")
+                        .toLocalDateTime(),
                 resultado.getBigDecimal("total_pagado"),
-                EstadoReserva.valueOf(resultado.getString("estado_reserva"))
+                EstadoReserva.valueOf(
+                        resultado.getString("estado_reserva")
+                )
         );
     }
 
@@ -250,18 +167,6 @@ public final class ReservaDAOJdbc implements ReservaDAO {
             throw new IllegalArgumentException(
                     "La reserva debe tener id para actualizarse"
             );
-        }
-    }
-
-    private void liberarConexion(Connection conexion) {
-        if (conexion == null) {
-            return;
-        }
-
-        try {
-            proveedorConexion.liberarConexion(conexion);
-        } catch (SQLException e) {
-            throw new DAOException("No se pudo liberar la conexion de reservas", e);
         }
     }
 }

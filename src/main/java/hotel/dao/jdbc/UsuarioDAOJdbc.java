@@ -2,202 +2,140 @@ package hotel.dao.jdbc;
 
 import hotel.conexion.ProveedorConexion;
 
-import hotel.excepcion.DAOException;
 import hotel.dao.UsuarioDAO;
 
 import hotel.modelo.entidades.Usuario;
 import hotel.modelo.entidades.constantes.RolUsuario;
 import hotel.modelo.sesion.ProveedorHotelId;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+/**
+ * Implementacion JDBC de {@link UsuarioDAO} para usuarios del hotel activo.
+ *
+ * APLICA PRINCIPIO SOLID: - SRP: solo persiste usuarios. - ISP: usa
+ * {@link ProveedorHotelId} para obtener el tenant sin depender de operaciones
+ * completas de sesion.
+ */
 public final class UsuarioDAOJdbc implements UsuarioDAO {
 
-    private static final String COLUMNAS = "id, hotel_id, username, password, rol";
-    private final ProveedorConexion proveedorConexion;
+    private static final String COLUMNAS
+            = "id, hotel_id, username, password, rol";
     private final ProveedorHotelId proveedorHotelId;
+    private final EjecutorDAO ejecutorDAO;
 
     public UsuarioDAOJdbc(
             ProveedorConexion proveedorConexion,
             ProveedorHotelId proveedorHotelId
     ) {
-        this.proveedorConexion = Objects.requireNonNull(proveedorConexion);
+        Objects.requireNonNull(proveedorConexion);
         this.proveedorHotelId = Objects.requireNonNull(proveedorHotelId);
+        this.ejecutorDAO = new EjecutorDAO(proveedorConexion);
     }
 
     @Override
     public Optional<Usuario> buscarPorId(int id) {
-        return buscarUno(
-                "SELECT "
+        String sql
+                = "SELECT "
                 + COLUMNAS
-                + " FROM usuarios WHERE hotel_id = ? AND id = ?",
-                id);
+                + " FROM usuarios WHERE hotel_id = ? AND id = ?";
+
+        return ejecutorDAO.consultarUno(
+                sql,
+                this::mapear,
+                proveedorHotelId.getHotelId(),
+                id
+        );
     }
 
     @Override
     public Optional<Usuario> buscarPorUsername(String username) {
-        String sql 
-                = "SELECT " 
-                + COLUMNAS 
-                + " FROM usuarios WHERE hotel_id = ? "
-                + "AND username = ?";
-        
-        try (
-                Connection conexion = proveedorConexion.obtenerConexion();
-                PreparedStatement sentencia = conexion.prepareStatement(sql)
-        ) {
-            sentencia.setInt(1, proveedorHotelId.getHotelId());
-            sentencia.setString(2, username);
-            
-            try (ResultSet resultado = sentencia.executeQuery()) {
-                return resultado.next() ? Optional.of(mapear(resultado)) : Optional.empty();
-            }
-            
-        } catch (SQLException e) {
-            throw new DAOException("No se pudo buscar el usuario", e);
-        }
+        String sql
+                = "SELECT "
+                + COLUMNAS
+                + " FROM usuarios WHERE hotel_id = ? AND username = ?";
+
+        return ejecutorDAO.consultarUno(
+                sql,
+                this::mapear,
+                proveedorHotelId.getHotelId(),
+                username
+        );
     }
 
     @Override
     public List<Usuario> listar() {
         String sql
-                = "SELECT " 
+                = "SELECT "
                 + COLUMNAS
-                + " FROM usuarios WHERE hotel_id = ? "
-                + "ORDER BY username";
-        
-        List<Usuario> usuarios = new ArrayList<>();
-        
-        try (
-                Connection conexion = proveedorConexion.obtenerConexion();
-                PreparedStatement sentencia = conexion.prepareStatement(sql)
-        ) {
-            sentencia.setInt(1, proveedorHotelId.getHotelId());
-            
-            try (ResultSet resultado = sentencia.executeQuery()) {
-                while (resultado.next()) {
-                    usuarios.add(mapear(resultado));
-                }
-            }
-            
-            return usuarios;
-            
-        } catch (SQLException e) {
-            throw new DAOException("No se pudieron listar los usuarios", e);
-        }
+                + " FROM usuarios WHERE hotel_id = ? ORDER BY username";
+
+        return ejecutorDAO.consultarLista(
+                sql,
+                this::mapear,
+                proveedorHotelId.getHotelId()
+        );
     }
 
     @Override
     public Usuario crear(Usuario usuario) {
-        String sql 
+        String sql
                 = "INSERT INTO usuarios "
                 + "(hotel_id, username, password, rol) "
                 + "VALUES (?, ?, ?, ?)";
-        
-        try (
-                Connection conexion = proveedorConexion.obtenerConexion();
-                PreparedStatement sentencia = conexion.prepareStatement(
-                        sql,
-                        Statement.RETURN_GENERATED_KEYS
-                )
-        ) {
-            sentencia.setInt(1, proveedorHotelId.getHotelId());
-            sentencia.setString(2, usuario.getUsername());
-            sentencia.setString(3, usuario.getPassword());
-            sentencia.setString(4, usuario.getRol().name());
-            sentencia.executeUpdate();
-            
-            try (ResultSet claves = sentencia.getGeneratedKeys()) {
-                if (!claves.next()) {
-                    throw new DAOException("PostgreSQL no devolvio el id del usuario");
-                }
-                
-                return new Usuario(
-                        claves.getInt(1),
-                        proveedorHotelId.getHotelId(),
-                        usuario.getUsername(),
-                        usuario.getPassword(),
-                        usuario.getRol());
-            }
-            
-        } catch (SQLException e) {
-            throw new DAOException("No se pudo crear el usuario", e);
-        }
+        int id = ejecutorDAO.crearYObtenerId(sql,
+                proveedorHotelId.getHotelId(),
+                usuario.getUsername(),
+                usuario.getPassword(),
+                usuario.getRol().name()
+        );
+
+        return new Usuario(
+                id,
+                proveedorHotelId.getHotelId(),
+                usuario.getUsername(),
+                usuario.getPassword(),
+                usuario.getRol()
+        );
     }
 
     @Override
     public boolean actualizar(Usuario usuario) {
         exigirId(usuario.getId());
-        String sql 
+        String sql
                 = "UPDATE usuarios "
-                + "SET username = ?, password = ?, rol = ? "
+                + "SET username = ?, "
+                + "password = ?, "
+                + "rol = ? "
                 + "WHERE hotel_id = ? "
                 + "AND id = ?";
-        
-        try (
-                Connection conexion = proveedorConexion.obtenerConexion();
-                PreparedStatement sentencia = conexion.prepareStatement(sql)
-        ) {
-            sentencia.setString(1, usuario.getUsername());
-            sentencia.setString(2, usuario.getPassword());
-            sentencia.setString(3, usuario.getRol().name());
-            sentencia.setInt(4, proveedorHotelId.getHotelId());
-            sentencia.setInt(5, usuario.getId());
-            
-            return sentencia.executeUpdate() == 1;
-            
-        } catch (SQLException e) {
-            throw new DAOException("No se pudo actualizar el usuario", e);
-        }
+
+        return ejecutorDAO.ejecutarModificacion(sql,
+                usuario.getUsername(),
+                usuario.getPassword(),
+                usuario.getRol().name(),
+                proveedorHotelId.getHotelId(),
+                usuario.getId()
+        );
     }
 
     @Override
     public boolean eliminar(int id) {
-        return ejecutarEliminacion(
-                "DELETE FROM usuarios WHERE hotel_id = ? AND id = ?",
+        String sql
+                = "DELETE FROM usuarios "
+                + "WHERE hotel_id = ? "
+                + "AND id = ?";
+
+        return ejecutorDAO.ejecutarModificacion(
+                sql,
+                proveedorHotelId.getHotelId(),
                 id
         );
-    }
-
-    private Optional<Usuario> buscarUno(String sql, int id) {
-        try (
-                Connection conexion = proveedorConexion.obtenerConexion();
-                PreparedStatement sentencia = conexion.prepareStatement(sql)
-        ) {
-            sentencia.setInt(1, proveedorHotelId.getHotelId());
-            sentencia.setInt(2, id);
-            
-            try (ResultSet resultado = sentencia.executeQuery()) {
-                return resultado.next() ? Optional.of(mapear(resultado)) : Optional.empty();
-            }
-            
-        } catch (SQLException e) {
-            throw new DAOException("No se pudo buscar el usuario", e);
-        }
-    }
-
-    private boolean ejecutarEliminacion(String sql, int id) {
-        try (
-                Connection conexion = proveedorConexion.obtenerConexion();
-                PreparedStatement sentencia = conexion.prepareStatement(sql)
-        ) {
-            sentencia.setInt(1, proveedorHotelId.getHotelId());
-            sentencia.setInt(2, id);
-            
-            return sentencia.executeUpdate() == 1;
-            
-        } catch (SQLException e) {
-            throw new DAOException("No se pudo eliminar el usuario", e);
-        }
     }
 
     private Usuario mapear(ResultSet resultado) throws SQLException {
@@ -212,7 +150,9 @@ public final class UsuarioDAOJdbc implements UsuarioDAO {
 
     private void exigirId(Integer id) {
         if (id == null) {
-            throw new IllegalArgumentException("El usuario debe tener id para actualizarse");
+            throw new IllegalArgumentException(
+                    "El usuario debe tener id para actualizarse"
+            );
         }
     }
 }

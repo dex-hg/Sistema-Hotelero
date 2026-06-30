@@ -1,22 +1,26 @@
 package hotel.dao.jdbc;
 
 import hotel.conexion.ProveedorConexion;
+
 import hotel.dao.ClienteDAO;
-import hotel.excepcion.DAOException;
+
 import hotel.modelo.entidades.Cliente;
 import hotel.modelo.sesion.ProveedorHotelId;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+/**
+ * Implementacion JDBC de {@link ClienteDAO} limitada siempre al hotel activo.
+ *
+ * APLICA PRINCIPIO SOLID: - SRP: solo traduce operaciones de clientes a SQL. -
+ * ISP: depende de {@link ProveedorHotelId}, una interfaz minima para conocer el
+ * tenant, en vez de acoplarse al contexto completo de sesion.
+ */
 public final class ClienteDAOJdbc implements ClienteDAO {
 
     private static final String COLUMNAS
@@ -26,23 +30,30 @@ public final class ClienteDAOJdbc implements ClienteDAO {
             + " documento_identidad,"
             + " telefono";
 
-    private final ProveedorConexion proveedorConexion;
     private final ProveedorHotelId proveedorHotelId;
+    private final EjecutorDAO ejecutorDAO;
 
     public ClienteDAOJdbc(
             ProveedorConexion proveedorConexion,
             ProveedorHotelId proveedorHotelId
     ) {
-        this.proveedorConexion = Objects.requireNonNull(proveedorConexion);
+        Objects.requireNonNull(proveedorConexion);
         this.proveedorHotelId = Objects.requireNonNull(proveedorHotelId);
+        this.ejecutorDAO = new EjecutorDAO(proveedorConexion);
     }
 
     @Override
     public Optional<Cliente> buscarPorId(int id) {
-        return buscarUno(
-                "SELECT "
+        String sql
+                = "SELECT "
                 + COLUMNAS
-                + " FROM clientes WHERE hotel_id = ? AND id = ?",
+                + " FROM clientes WHERE hotel_id = ? "
+                + "AND id = ?";
+
+        return ejecutorDAO.consultarUno(
+                sql,
+                this::mapear,
+                proveedorHotelId.getHotelId(),
                 id
         );
     }
@@ -55,25 +66,12 @@ public final class ClienteDAOJdbc implements ClienteDAO {
                 + " FROM clientes WHERE hotel_id = ? "
                 + "AND documento_identidad = ?";
 
-        Connection conexion = null;
-        try {
-            conexion = proveedorConexion.obtenerConexion();
-            try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
-                sentencia.setInt(1, proveedorHotelId.getHotelId());
-                sentencia.setString(2, documento);
-
-                try (ResultSet resultado = sentencia.executeQuery()) {
-                    return resultado.next()
-                            ? Optional.of(mapear(resultado))
-                            : Optional.empty();
-                }
-            }
-
-        } catch (SQLException e) {
-            throw new DAOException("No se pudo buscar el cliente", e);
-        } finally {
-            liberarConexion(conexion);
-        }
+        return ejecutorDAO.consultarUno(
+                sql,
+                this::mapear,
+                proveedorHotelId.getHotelId(),
+                documento
+        );
     }
 
     @Override
@@ -83,101 +81,57 @@ public final class ClienteDAOJdbc implements ClienteDAO {
                 + COLUMNAS
                 + " FROM clientes WHERE hotel_id = ? "
                 + "ORDER BY nombre_completo";
-        List<Cliente> clientes = new ArrayList<>();
 
-        Connection conexion = null;
-        try {
-            conexion = proveedorConexion.obtenerConexion();
-            try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
-                sentencia.setInt(1, proveedorHotelId.getHotelId());
-
-                try (ResultSet resultado = sentencia.executeQuery()) {
-                    while (resultado.next()) {
-                        clientes.add(mapear(resultado));
-                    }
-                }
-
-                return clientes;
-            }
-
-        } catch (SQLException e) {
-            throw new DAOException("No se pudieron listar los clientes", e);
-        } finally {
-            liberarConexion(conexion);
-        }
+        return ejecutorDAO.consultarLista(
+                sql,
+                this::mapear,
+                proveedorHotelId.getHotelId()
+        );
     }
 
     @Override
     public Cliente crear(Cliente cliente) {
         String sql
-                = "INSERT INTO "
-                + "clientes (hotel_id, nombre_completo, documento_identidad, telefono) "
+                = "INSERT INTO clientes "
+                + "(hotel_id, nombre_completo, documento_identidad, telefono) "
                 + "VALUES (?, ?, ?, ?)";
 
-        Connection conexion = null;
-        try {
-            conexion = proveedorConexion.obtenerConexion();
-            try (PreparedStatement sentencia = conexion.prepareStatement(
-                    sql,
-                    Statement.RETURN_GENERATED_KEYS
-            )) {
-                sentencia.setInt(1, proveedorHotelId.getHotelId());
-                sentencia.setString(2, cliente.getNombreCompleto());
-                sentencia.setString(3, cliente.getDocumentoIdentidad());
-                sentencia.setString(4, cliente.getTelefono());
-                sentencia.executeUpdate();
+        int id = ejecutorDAO.crearYObtenerId(
+                sql,
+                proveedorHotelId.getHotelId(),
+                cliente.getNombreCompleto(),
+                cliente.getDocumentoIdentidad(),
+                cliente.getTelefono()
+        );
 
-                try (ResultSet claves = sentencia.getGeneratedKeys()) {
-                    if (!claves.next()) {
-                        throw new DAOException("PostgreSQL no devolvio el id del cliente");
-                    }
-
-                    return new Cliente(
-                            claves.getInt(1),
-                            proveedorHotelId.getHotelId(),
-                            cliente.getNombreCompleto(),
-                            cliente.getDocumentoIdentidad(),
-                            cliente.getTelefono()
-                    );
-                }
-            }
-
-        } catch (SQLException e) {
-            throw new DAOException("No se pudo crear el cliente", e);
-        } finally {
-            liberarConexion(conexion);
-        }
+        return new Cliente(
+                id,
+                proveedorHotelId.getHotelId(),
+                cliente.getNombreCompleto(),
+                cliente.getDocumentoIdentidad(),
+                cliente.getTelefono()
+        );
     }
 
     @Override
     public boolean actualizar(Cliente cliente) {
         exigirId(cliente.getId());
         String sql
-                = "UPDATE clientes "
-                + "SET nombre_completo = ?, "
+                = "UPDATE clientes SET "
+                + "nombre_completo = ?, "
                 + "documento_identidad = ?, "
                 + "telefono = ? "
                 + "WHERE hotel_id = ? "
                 + "AND id = ?";
 
-        Connection conexion = null;
-        try {
-            conexion = proveedorConexion.obtenerConexion();
-            try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
-                sentencia.setString(1, cliente.getNombreCompleto());
-                sentencia.setString(2, cliente.getDocumentoIdentidad());
-                sentencia.setString(3, cliente.getTelefono());
-                sentencia.setInt(4, proveedorHotelId.getHotelId());
-                sentencia.setInt(5, cliente.getId());
-
-                return sentencia.executeUpdate() == 1;
-            }
-
-        } catch (SQLException e) {
-            throw new DAOException("No se pudo actualizar el cliente", e);
-        } finally {
-            liberarConexion(conexion);
-        }
+        return ejecutorDAO.ejecutarModificacion(
+                sql,
+                cliente.getNombreCompleto(),
+                cliente.getDocumentoIdentidad(),
+                cliente.getTelefono(),
+                proveedorHotelId.getHotelId(),
+                cliente.getId()
+        );
     }
 
     @Override
@@ -187,70 +141,34 @@ public final class ClienteDAOJdbc implements ClienteDAO {
                 + "WHERE hotel_id = ? "
                 + "AND id = ?";
 
-        Connection conexion = null;
-        try {
-            conexion = proveedorConexion.obtenerConexion();
-            try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
-                sentencia.setInt(1, proveedorHotelId.getHotelId());
-                sentencia.setInt(2, id);
-
-                return sentencia.executeUpdate() == 1;
-            }
-
-        } catch (SQLException e) {
-            throw new DAOException("No se pudo eliminar el cliente", e);
-        } finally {
-            liberarConexion(conexion);
-        }
-    }
-
-    private Optional<Cliente> buscarUno(String sql, int id) {
-        Connection conexion = null;
-        try {
-            conexion = proveedorConexion.obtenerConexion();
-            try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
-                sentencia.setInt(1, proveedorHotelId.getHotelId());
-                sentencia.setInt(2, id);
-
-                try (ResultSet resultado = sentencia.executeQuery()) {
-                    return resultado.next()
-                            ? Optional.of(mapear(resultado))
-                            : Optional.empty();
-                }
-            }
-
-        } catch (SQLException e) {
-            throw new DAOException("No se pudo buscar el cliente", e);
-        } finally {
-            liberarConexion(conexion);
-        }
+        return ejecutorDAO.ejecutarModificacion(
+                sql,
+                proveedorHotelId.getHotelId(),
+                id
+        );
     }
 
     private Cliente mapear(ResultSet resultado) throws SQLException {
         return new Cliente(
                 resultado.getInt("id"),
                 resultado.getInt("hotel_id"),
-                resultado.getString("nombre_completo"),
-                resultado.getString("documento_identidad"),
-                resultado.getString("telefono")
+                resultado.getString(
+                        "nombre_completo"
+                ),
+                resultado.getString(
+                        "documento_identidad"
+                ),
+                resultado.getString(
+                        "telefono"
+                )
         );
     }
 
     private void exigirId(Integer id) {
         if (id == null) {
-            throw new IllegalArgumentException("El cliente debe tener id para actualizarse");
-        }
-    }
-
-    private void liberarConexion(Connection conexion) {
-        if (conexion == null) {
-            return;
-        }
-
-        try {
-            proveedorConexion.liberarConexion(conexion);
-        } catch (SQLException e) {
-            throw new DAOException("No se pudo liberar la conexion de clientes", e);
+            throw new IllegalArgumentException(
+                    "El cliente debe tener id para actualizarse"
+            );
         }
     }
 }

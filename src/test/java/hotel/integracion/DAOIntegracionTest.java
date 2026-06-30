@@ -276,7 +276,9 @@ public final class DAOIntegracionTest {
             sentencia.execute("SET search_path TO " + esquema);
 
             String sql = Files.readString(Path.of("src/main/resources/db/schema.sql"))
-                    .replaceFirst("(?im)^\\s*CREATE\\s+DATABASE\\s+sistema_hotel\\s*;", "");
+                    .replaceFirst("(?im)^\\s*CREATE\\s+DATABASE\\s+sistema_hotel\\s*;", "")
+                    .replaceAll("(?is)INSERT\\s+INTO\\s+hoteles\\s*\\([^;]+;", "")
+                    .replaceAll("(?is)INSERT\\s+INTO\\s+usuarios\\s*\\([^;]+;", "");
             for (String bloque : sql.split(";")) {
                 if (!bloque.isBlank()) {
                     sentencia.execute(bloque);
