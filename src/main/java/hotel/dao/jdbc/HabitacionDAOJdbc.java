@@ -61,6 +61,19 @@ public final class HabitacionDAOJdbc implements HabitacionDAO {
     }
 
     @Override
+    public Optional<Habitacion> buscarPorIdParaActualizar(int id) {
+        String sql = "SELECT " + COLUMNAS
+                + " FROM habitaciones WHERE hotel_id = ? AND id = ? "
+                + "FOR UPDATE";
+        return ejecutorDAO.consultarUno(
+                sql,
+                this::mapear,
+                proveedorHotelId.getHotelId(),
+                id
+        );
+    }
+
+    @Override
     public Optional<Habitacion> buscarPorNumero(String numero) {
         String sql
                 = "SELECT "

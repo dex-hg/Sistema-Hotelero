@@ -41,6 +41,12 @@ public final class HabitacionDAOProxy implements HabitacionDAO {
     }
 
     @Override
+    public Optional<Habitacion> buscarPorIdParaActualizar(int id) {
+        exigirSesion();
+        return daoReal.buscarPorIdParaActualizar(id);
+    }
+
+    @Override
     public Optional<Habitacion> buscarPorNumero(String numero) {
         exigirSesion();
         return daoReal.buscarPorNumero(numero);

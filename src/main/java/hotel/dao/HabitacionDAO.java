@@ -9,6 +9,12 @@ public interface HabitacionDAO {
 
     Optional<Habitacion> buscarPorId(int id);
 
+    /**
+     * Busca y bloquea la fila hasta terminar la transacción actual. Se usa al
+     * comprobar disponibilidad para evitar reservas concurrentes solapadas.
+     */
+    Optional<Habitacion> buscarPorIdParaActualizar(int id);
+
     Optional<Habitacion> buscarPorNumero(String numero);
 
     List<Habitacion> listar();
