@@ -1,10 +1,11 @@
-package hotel.vista;
+package hotel.vista.ventana;
 
 import hotel.configuracion.ComposicionAplicacion;
 
 import hotel.controlador.AutenticacionControlador;
 
 import hotel.modelo.entidades.Usuario;
+import hotel.vista.VistaUtil;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -41,7 +42,15 @@ public final class VentanaLogin extends JFrame {
     }
 
     public void mostrar() {
-        SwingUtilities.invokeLater(() -> setVisible(true));
+        if (SwingUtilities.isEventDispatchThread()) {
+            setVisible(true);
+            rucHotel.requestFocusInWindow();
+        } else {
+            SwingUtilities.invokeLater(() -> {
+                setVisible(true);
+                rucHotel.requestFocusInWindow();
+            });
+        }
     }
 
     private void construir() {
@@ -54,7 +63,7 @@ public final class VentanaLogin extends JFrame {
         titulo.setFont(titulo.getFont().deriveFont(Font.BOLD, 28f));
 
         JLabel subtitulo = new JLabel(
-                "Inicia sesion con las credenciales de tu hotel"
+                "Inicia sesión con las credenciales de tu hotel"
         );
 
         JPanel encabezado = new JPanel(new BorderLayout(4, 4));
@@ -90,13 +99,9 @@ public final class VentanaLogin extends JFrame {
                 password
         );
 
-        JButton ingresar = new JButton("Iniciar sesion");
-        ingresar.addActionListener(
-                e -> VistaUtil.ejecutar(
-                        this,
-                        this::iniciarSesion
-                )
-        );
+        JButton ingresar = new JButton("Iniciar sesión");
+        ingresar.setMnemonic(java.awt.event.KeyEvent.VK_I);
+        ingresar.addActionListener(e -> iniciarSesionAsync(ingresar));
         getRootPane().setDefaultButton(ingresar);
 
         JPanel acciones = new JPanel(new BorderLayout());
@@ -133,7 +138,9 @@ public final class VentanaLogin extends JFrame {
         c.gridx = 0;
         c.gridy = fila;
         c.weighty = 0;
-        formulario.add(new JLabel(etiqueta), c);
+        JLabel label = new JLabel(etiqueta);
+        label.setLabelFor(campo);
+        formulario.add(label, c);
 
         c.gridy = fila + 1;
         c.weighty = 1;
@@ -141,14 +148,31 @@ public final class VentanaLogin extends JFrame {
         formulario.add(campo, c);
     }
 
-    private void iniciarSesion() {
-        Usuario usuario = autenticacion.iniciarSesion(
-                rucHotel.getText(),
-                username.getText(),
-                new String(password.getPassword())
+    private void iniciarSesionAsync(JButton boton) {
+        String ruc = rucHotel.getText();
+        String usuarioTexto = username.getText();
+        String clave = new String(password.getPassword());
+        VistaUtil.ejecutarAsync(
+                this,
+                boton,
+                () -> {
+                    Usuario usuario = autenticacion.iniciarSesion(
+                            ruc,
+                            usuarioTexto,
+                            clave
+                    );
+                    aplicacion.reservaControlador().finalizarVencidas();
+                    return usuario;
+                },
+                usuario -> {
+                    VentanaPrincipal principal = new VentanaPrincipal(
+                            aplicacion,
+                            usuario
+                    );
+                    principal.mostrar();
+                    dispose();
+                },
+                null
         );
-
-        dispose();
-        new VentanaPrincipal(aplicacion, usuario).mostrar();
     }
 }

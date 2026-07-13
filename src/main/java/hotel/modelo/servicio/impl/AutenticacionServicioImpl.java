@@ -56,7 +56,7 @@ public final class AutenticacionServicioImpl implements AutenticacionServicio {
 
         int hotelId = hotelDAO.buscarPorRuc(rucHotel.trim())
                 .orElseThrow(() -> new ReglaNegocioException(
-                "Credenciales invalidas"
+                "Credenciales inválidas"
         ))
                 .getId();
 
@@ -73,19 +73,19 @@ public final class AutenticacionServicioImpl implements AutenticacionServicio {
             throw new ReglaNegocioException("Ingrese el usuario");
         }
         if (password == null || password.isBlank()) {
-            throw new ReglaNegocioException("Ingrese la contrasena");
+            throw new ReglaNegocioException("Ingrese la contraseña");
         }
 
         Usuario usuario = autenticacionUsuarioDAO
                 .buscarPorHotelYUsername(hotelId, username.trim())
                 .orElseThrow(() -> new ReglaNegocioException(
-                "Credenciales invalidas"
+                "Credenciales inválidas"
         )
                 );
 
         if (!usuario.getPassword().equals(password)) {
             throw new ReglaNegocioException(
-                    "Credenciales invalidas"
+                    "Credenciales inválidas"
             );
         }
 

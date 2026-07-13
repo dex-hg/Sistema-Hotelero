@@ -1,16 +1,24 @@
 package hotel.modelo.servicio;
 
 import hotel.modelo.entidades.Reserva;
+import hotel.modelo.entidades.Cliente;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 public interface ReservaServicio {
 
     Reserva buscarPorId(int id);
 
     List<Reserva> listar();
+
+    int finalizarVencidas(LocalDateTime fechaActual);
+
+    List<Cliente> listarHuespedes(int reservaId);
+
+    Map<Integer, List<Cliente>> listarHuespedesPorReserva();
 
     Reserva crear(
             int habitacionId,
@@ -36,7 +44,28 @@ public interface ReservaServicio {
             int habitacionId,
             LocalDateTime fechaIngreso,
             LocalDateTime fechaSalida,
+            List<DatosHuespedRecepcion> huespedesAdicionales
+    );
+
+    Reserva registrarRecepcion(
+            String nombreCompleto,
+            String documentoIdentidad,
+            String telefono,
+            int habitacionId,
+            LocalDateTime fechaIngreso,
+            LocalDateTime fechaSalida,
             BigDecimal totalPagado
+    );
+
+    Reserva registrarRecepcion(
+            String nombreCompleto,
+            String documentoIdentidad,
+            String telefono,
+            int habitacionId,
+            LocalDateTime fechaIngreso,
+            LocalDateTime fechaSalida,
+            BigDecimal totalPagado,
+            List<DatosHuespedRecepcion> huespedesAdicionales
     );
 
     Reserva registrarPago(int reservaId, BigDecimal monto);
@@ -46,6 +75,8 @@ public interface ReservaServicio {
     Reserva registrarCheckOut(int reservaId);
 
     Reserva cancelar(int reservaId);
+
+    Reserva cancelarRecepcion(int reservaId);
 
     Reserva finalizar(int reservaId);
 

@@ -10,8 +10,10 @@ import hotel.dao.ReservaDAO;
 import hotel.modelo.entidades.Cliente;
 import hotel.modelo.entidades.Habitacion;
 import hotel.modelo.entidades.Reserva;
+import hotel.modelo.entidades.constantes.EstadoHabitacion;
 import hotel.modelo.entidades.constantes.EstadoReserva;
 import hotel.modelo.sesion.ProveedorHotelId;
+import hotel.modelo.servicio.DatosHuespedRecepcion;
 import hotel.modelo.servicio.ReservaServicio;
 
 import hotel.excepcion.EntidadNoEncontradaException;
@@ -24,6 +26,9 @@ import java.time.temporal.ChronoUnit;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.Map;
 
 /**
  * Implementación de {@link ReservaServicio} que coordina las reglas de negocio
@@ -109,6 +114,52 @@ public final class ReservaServicioImpl implements ReservaServicio {
     }
 
     @Override
+    public int finalizarVencidas(LocalDateTime fechaActual) {
+        Objects.requireNonNull(fechaActual, "fechaActual es obligatoria");
+        return ejecutorTransaccional.ejecutar(() -> {
+            int finalizadas = 0;
+            for (Reserva reserva : reservaDAO.listar()) {
+                if (reserva.getEstado() != EstadoReserva.ACTIVA
+                        || reserva.getFechaSalida().isAfter(fechaActual)) {
+                    continue;
+                }
+
+                reserva.cambiarEstado(EstadoReserva.FINALIZADA);
+                persistir(reserva);
+
+                Habitacion habitacion = buscarHabitacionDeReserva(reserva);
+                if (habitacion.getEstado() == EstadoHabitacion.OCUPADA) {
+                    habitacion.iniciarLimpieza();
+                    persistir(habitacion);
+                }
+                finalizadas++;
+            }
+            return finalizadas;
+        });
+    }
+
+    @Override
+    public List<Cliente> listarHuespedes(int reservaId) {
+        Reserva reserva = buscarPorId(reservaId);
+        List<Cliente> huespedes = reservaDAO.listarHuespedes(reservaId);
+        if (!huespedes.isEmpty()) {
+            return huespedes;
+        }
+
+        Cliente principal = clienteDAO.buscarPorId(reserva.getClienteId())
+                .orElseThrow(() -> new EntidadNoEncontradaException(
+                "No existe el huésped principal de la reserva "
+                + reserva.getId()
+        ));
+        return List.of(principal);
+    }
+
+    @Override
+    public Map<Integer, List<Cliente>> listarHuespedesPorReserva() {
+        return reservaDAO.listarHuespedesPorReserva();
+    }
+
+    @Override
     public Reserva crear(
             int habitacionId,
             int clienteId,
@@ -116,11 +167,12 @@ public final class ReservaServicioImpl implements ReservaServicio {
             LocalDateTime fechaSalida,
             BigDecimal totalPagado
     ) {
-        if (habitacionDAO.buscarPorId(habitacionId).isEmpty()) {
-            throw new ReglaNegocioException(
-                    "La habitacion no pertenece al hotel activo"
-            );
-        }
+        exigirHabitacionDisponible(habitacionId);
+        exigirDisponibilidadEnFechas(
+                habitacionId,
+                fechaIngreso,
+                fechaSalida
+        );
 
         if (clienteDAO.buscarPorId(clienteId).isEmpty()) {
             throw new ReglaNegocioException(
@@ -135,7 +187,9 @@ public final class ReservaServicioImpl implements ReservaServicio {
                 totalPagado, EstadoReserva.ACTIVA
         );
 
-        return reservaDAO.crear(reserva);
+        Reserva creada = reservaDAO.crear(reserva);
+        reservaDAO.asociarHuesped(creada.getId(), clienteId, true);
+        return creada;
     }
 
     @Override
@@ -147,10 +201,7 @@ public final class ReservaServicioImpl implements ReservaServicio {
             LocalDateTime fechaIngreso,
             LocalDateTime fechaSalida
     ) {
-        Habitacion habitacion = habitacionDAO.buscarPorId(habitacionId)
-                .orElseThrow(() -> new ReglaNegocioException(
-                "La habitacion no pertenece al hotel activo"
-        ));
+        Habitacion habitacion = exigirHabitacionDisponible(habitacionId);
 
         return registrarRecepcion(
                 nombreCompleto,
@@ -163,7 +214,36 @@ public final class ReservaServicioImpl implements ReservaServicio {
                         habitacion,
                         fechaIngreso,
                         fechaSalida
-                )
+                ),
+                List.of()
+        );
+    }
+
+    @Override
+    public Reserva registrarRecepcion(
+            String nombreCompleto,
+            String documentoIdentidad,
+            String telefono,
+            int habitacionId,
+            LocalDateTime fechaIngreso,
+            LocalDateTime fechaSalida,
+            List<DatosHuespedRecepcion> huespedesAdicionales
+    ) {
+        Habitacion habitacion = exigirHabitacionDisponible(habitacionId);
+
+        return registrarRecepcion(
+                nombreCompleto,
+                documentoIdentidad,
+                telefono,
+                habitacionId,
+                fechaIngreso,
+                fechaSalida,
+                calcularTotalHospedaje(
+                        habitacion,
+                        fechaIngreso,
+                        fechaSalida
+                ),
+                huespedesAdicionales
         );
     }
 
@@ -188,13 +268,44 @@ public final class ReservaServicioImpl implements ReservaServicio {
             LocalDateTime fechaSalida,
             BigDecimal totalPagado
     ) {
+        return registrarRecepcion(
+                nombreCompleto,
+                documentoIdentidad,
+                telefono,
+                habitacionId,
+                fechaIngreso,
+                fechaSalida,
+                totalPagado,
+                List.of()
+        );
+    }
+
+    @Override
+    public Reserva registrarRecepcion(
+            String nombreCompleto,
+            String documentoIdentidad,
+            String telefono,
+            int habitacionId,
+            LocalDateTime fechaIngreso,
+            LocalDateTime fechaSalida,
+            BigDecimal totalPagado,
+            List<DatosHuespedRecepcion> huespedesAdicionales
+    ) {
 
         return ejecutorTransaccional.ejecutar(() -> {
+            List<DatosHuespedRecepcion> adicionales
+                    = huespedesAdicionales == null
+                            ? List.of()
+                            : huespedesAdicionales;
+
             Habitacion habitacion
-                    = habitacionDAO.buscarPorId(habitacionId)
-                            .orElseThrow(() -> new ReglaNegocioException(
-                            "La habitacion no pertenece al hotel activo"
-                    ));
+                    = exigirHabitacionDisponible(habitacionId);
+
+            validarOcupacion(
+                    habitacion,
+                    documentoIdentidad,
+                    adicionales
+            );
 
             Cliente cliente = guardarOActualizarCliente(
                     nombreCompleto,
@@ -212,12 +323,45 @@ public final class ReservaServicioImpl implements ReservaServicio {
                     totalPagado,
                     EstadoReserva.ACTIVA
             ));
+            reservaDAO.asociarHuesped(reserva.getId(), cliente.getId(), true);
+            asociarHuespedesAdicionales(reserva, adicionales);
 
             habitacion.ocupar();
             persistir(habitacion);
 
             return reserva;
         });
+    }
+
+    private void asociarHuespedesAdicionales(
+            Reserva reserva,
+            List<DatosHuespedRecepcion> huespedesAdicionales
+    ) {
+        for (DatosHuespedRecepcion item : huespedesAdicionales) {
+            validarHuespedAdicional(item);
+            Cliente huesped = guardarOActualizarCliente(
+                    item.nombreCompleto(),
+                    item.documentoIdentidad(),
+                    item.telefono()
+            );
+            reservaDAO.asociarHuesped(
+                    reserva.getId(),
+                    huesped.getId(),
+                    false
+            );
+        }
+    }
+
+    private void validarHuespedAdicional(DatosHuespedRecepcion item) {
+        if (item == null
+                || item.documentoIdentidad() == null
+                || item.documentoIdentidad().isBlank()
+                || item.nombreCompleto() == null
+                || item.nombreCompleto().isBlank()) {
+            throw new ReglaNegocioException(
+                    "Cada huésped adicional debe tener DNI y nombre"
+            );
+        }
     }
 
     private BigDecimal calcularTotalHospedaje(
@@ -260,8 +404,9 @@ public final class ReservaServicioImpl implements ReservaServicio {
     }
 
     /**
-     * Registra la salida física del huésped (Check-out). Finaliza la reserva y
-     * transiciona el estado de la habitación a EN_LIMPIEZA.
+     * Registra la salida física del huésped (Check-out). Solo procede sobre
+     * reservas ya finalizadas y transiciona el estado de la habitación a
+     * EN_LIMPIEZA.
      *
      * METODO CLAVE DE NEGOCIO: - Cambia el estado de la reserva. - Aplica el
      * patrón State para cambiar el estado de la habitación mediante una
@@ -270,13 +415,27 @@ public final class ReservaServicioImpl implements ReservaServicio {
     @Override
     public Reserva registrarCheckOut(int reservaId) {
         return ejecutorTransaccional.ejecutar(() -> {
-            Reserva reserva = exigirActiva(reservaId);
+            Reserva reserva = buscarPorId(reservaId);
+            if (reserva.getEstado() == EstadoReserva.CANCELADA) {
+                throw new ReglaNegocioException(
+                        "No se puede registrar la salida de una reserva cancelada"
+                );
+            }
+            if (reserva.getEstado() == EstadoReserva.ACTIVA) {
+                reserva.cambiarEstado(EstadoReserva.FINALIZADA);
+            }
             Habitacion habitacion = buscarHabitacionDeReserva(reserva);
 
-            habitacion.iniciarLimpieza();
-            reserva.cambiarEstado(EstadoReserva.FINALIZADA);
-
-            persistir(habitacion);
+            if (habitacion.getEstado() == EstadoHabitacion.OCUPADA) {
+                habitacion.iniciarLimpieza();
+                persistir(habitacion);
+            } else if (habitacion.getEstado()
+                    != EstadoHabitacion.EN_LIMPIEZA) {
+                throw new ReglaNegocioException(
+                        "La habitación debe estar ocupada o en limpieza "
+                        + "para registrar el check-out"
+                );
+            }
             persistir(reserva);
 
             return reserva;
@@ -293,12 +452,34 @@ public final class ReservaServicioImpl implements ReservaServicio {
     }
 
     @Override
-    public Reserva finalizar(int reservaId) {
-        Reserva reserva = exigirActiva(reservaId);
-        reserva.cambiarEstado(EstadoReserva.FINALIZADA);
-        persistir(reserva);
+    public Reserva cancelarRecepcion(int reservaId) {
+        return ejecutorTransaccional.ejecutar(() -> {
+            Reserva reserva = exigirActiva(reservaId);
+            Habitacion habitacion = buscarHabitacionDeReserva(reserva);
 
-        return reserva;
+            reserva.cambiarEstado(EstadoReserva.CANCELADA);
+            if (habitacion.getEstado() == EstadoHabitacion.OCUPADA) {
+                habitacion.iniciarLimpieza();
+                persistir(habitacion);
+            }
+            persistir(reserva);
+            return reserva;
+        });
+    }
+
+    @Override
+    public Reserva finalizar(int reservaId) {
+        return ejecutorTransaccional.ejecutar(() -> {
+            Reserva reserva = exigirActiva(reservaId);
+            Habitacion habitacion = buscarHabitacionDeReserva(reserva);
+            reserva.cambiarEstado(EstadoReserva.FINALIZADA);
+            persistir(reserva);
+            if (habitacion.getEstado() == EstadoHabitacion.OCUPADA) {
+                habitacion.iniciarLimpieza();
+                persistir(habitacion);
+            }
+            return reserva;
+        });
     }
 
     @Override
@@ -344,8 +525,8 @@ public final class ReservaServicioImpl implements ReservaServicio {
 
         if (!clienteDAO.actualizar(actualizado)) {
             throw new EntidadNoEncontradaException(
-                    "El cliente dejo de existir "
-                    + "durante la actualizacion"
+                    "El cliente dejó de existir "
+                    + "durante la actualización"
             );
         }
 
@@ -366,17 +547,84 @@ public final class ReservaServicioImpl implements ReservaServicio {
         return habitacionDAO.buscarPorId(
                 reserva.getHabitacionId()).orElseThrow(
                 () -> new EntidadNoEncontradaException(
-                        "No existe la habitacion de la reserva "
+                        "No existe la habitación de la reserva "
                         + reserva.getId()
                 )
         );
     }
 
+    private Habitacion exigirHabitacionDisponible(int habitacionId) {
+        Habitacion habitacion = habitacionDAO.buscarPorId(habitacionId)
+                .orElseThrow(() -> new ReglaNegocioException(
+                "La habitación no pertenece al hotel activo"
+        ));
+        if (habitacion.getEstado() != EstadoHabitacion.DISPONIBLE) {
+            throw new ReglaNegocioException(
+                    "Solo se pueden registrar reservas en habitaciones "
+                    + "con estado DISPONIBLE"
+            );
+        }
+        return habitacion;
+    }
+
+    private void exigirDisponibilidadEnFechas(
+            int habitacionId,
+            LocalDateTime fechaIngreso,
+            LocalDateTime fechaSalida
+    ) {
+        if (fechaIngreso == null || fechaSalida == null
+                || !fechaSalida.isAfter(fechaIngreso)) {
+            throw new ReglaNegocioException(
+                    "La salida debe ser posterior al ingreso"
+            );
+        }
+        boolean existeCruce = reservaDAO.listar().stream()
+                .filter(reserva -> reserva.getHabitacionId() == habitacionId)
+                .filter(reserva -> reserva.getEstado() != EstadoReserva.CANCELADA)
+                .anyMatch(reserva -> fechaIngreso.isBefore(
+                reserva.getFechaSalida()
+        ) && fechaSalida.isAfter(reserva.getFechaIngreso()));
+        if (existeCruce) {
+            throw new ReglaNegocioException(
+                    "La habitación ya tiene una reserva en ese periodo"
+            );
+        }
+    }
+
+    private void validarOcupacion(
+            Habitacion habitacion,
+            String documentoPrincipal,
+            List<DatosHuespedRecepcion> adicionales
+    ) {
+        int cantidadHuespedes = 1 + adicionales.size();
+        if (cantidadHuespedes > habitacion.getCantidadCamas()) {
+            throw new ReglaNegocioException(
+                    "La habitación admite como máximo "
+                    + habitacion.getCantidadCamas()
+                    + " huésped(es) según su cantidad de camas"
+            );
+        }
+
+        Set<String> documentos = new HashSet<>();
+        if (documentoPrincipal != null) {
+            documentos.add(documentoPrincipal.trim());
+        }
+        for (DatosHuespedRecepcion adicional : adicionales) {
+            validarHuespedAdicional(adicional);
+            String documento = adicional.documentoIdentidad().trim();
+            if (!documentos.add(documento)) {
+                throw new ReglaNegocioException(
+                        "No se puede registrar el mismo DNI más de una vez"
+                );
+            }
+        }
+    }
+
     private void persistir(Reserva reserva) {
         if (!reservaDAO.actualizar(reserva)) {
             throw new EntidadNoEncontradaException(
-                    "La reserva dejo de existir "
-                    + "durante la actualizacion"
+                    "La reserva dejó de existir "
+                    + "durante la actualización"
             );
         }
     }
@@ -384,8 +632,8 @@ public final class ReservaServicioImpl implements ReservaServicio {
     private void persistir(Habitacion habitacion) {
         if (!habitacionDAO.actualizar(habitacion)) {
             throw new EntidadNoEncontradaException(
-                    "La habitacion dejo de existir "
-                    + "durante la actualizacion"
+                    "La habitación dejó de existir "
+                    + "durante la actualización"
             );
         }
     }

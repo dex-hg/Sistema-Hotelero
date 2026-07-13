@@ -1,6 +1,8 @@
 package hotel.controlador;
 
 import hotel.modelo.entidades.Reserva;
+import hotel.modelo.entidades.Cliente;
+import hotel.modelo.servicio.DatosHuespedRecepcion;
 import hotel.modelo.servicio.ReservaServicio;
 
 import java.math.BigDecimal;
@@ -8,6 +10,7 @@ import java.time.LocalDateTime;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Map;
 
 public final class ReservaControlador {
 
@@ -21,8 +24,20 @@ public final class ReservaControlador {
         return servicio.listar();
     }
 
+    public int finalizarVencidas() {
+        return servicio.finalizarVencidas(LocalDateTime.now());
+    }
+
     public Reserva buscarPorId(int id) {
         return servicio.buscarPorId(id);
+    }
+
+    public List<Cliente> listarHuespedes(int reservaId) {
+        return servicio.listarHuespedes(reservaId);
+    }
+
+    public Map<Integer, List<Cliente>> listarHuespedesPorReserva() {
+        return servicio.listarHuespedesPorReserva();
     }
 
     public Reserva crear(
@@ -66,6 +81,26 @@ public final class ReservaControlador {
             int habitacionId,
             LocalDateTime ingreso,
             LocalDateTime salida,
+            List<DatosHuespedRecepcion> huespedesAdicionales
+    ) {
+        return servicio.registrarRecepcion(
+                nombreCompleto,
+                documentoIdentidad,
+                telefono,
+                habitacionId,
+                ingreso,
+                salida,
+                huespedesAdicionales
+        );
+    }
+
+    public Reserva registrarRecepcion(
+            String nombreCompleto,
+            String documentoIdentidad,
+            String telefono,
+            int habitacionId,
+            LocalDateTime ingreso,
+            LocalDateTime salida,
             BigDecimal totalPagado
     ) {
         return servicio.registrarRecepcion(
@@ -76,6 +111,28 @@ public final class ReservaControlador {
                 ingreso,
                 salida,
                 totalPagado
+        );
+    }
+
+    public Reserva registrarRecepcion(
+            String nombreCompleto,
+            String documentoIdentidad,
+            String telefono,
+            int habitacionId,
+            LocalDateTime ingreso,
+            LocalDateTime salida,
+            BigDecimal totalPagado,
+            List<DatosHuespedRecepcion> huespedesAdicionales
+    ) {
+        return servicio.registrarRecepcion(
+                nombreCompleto,
+                documentoIdentidad,
+                telefono,
+                habitacionId,
+                ingreso,
+                salida,
+                totalPagado,
+                huespedesAdicionales
         );
     }
 
@@ -93,6 +150,10 @@ public final class ReservaControlador {
 
     public Reserva cancelar(int id) {
         return servicio.cancelar(id);
+    }
+
+    public Reserva cancelarRecepcion(int id) {
+        return servicio.cancelarRecepcion(id);
     }
 
     public Reserva finalizar(int id) {

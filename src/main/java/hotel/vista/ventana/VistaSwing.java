@@ -1,8 +1,10 @@
-package hotel.vista;
+package hotel.vista.ventana;
 
 import hotel.configuracion.ComposicionAplicacion;
+import hotel.vista.EstilosSwing;
 
 import java.util.Objects;
+import javax.swing.SwingUtilities;
 
 public final class VistaSwing {
 
@@ -13,7 +15,9 @@ public final class VistaSwing {
     }
 
     public void iniciar() {
-        EstilosSwing.aplicar();
-        new VentanaLogin(aplicacion).mostrar();
+        SwingUtilities.invokeLater(() -> {
+            EstilosSwing.aplicar();
+            new VentanaLogin(aplicacion).mostrar();
+        });
     }
 }

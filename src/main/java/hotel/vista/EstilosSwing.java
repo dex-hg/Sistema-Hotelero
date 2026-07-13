@@ -13,10 +13,14 @@ public final class EstilosSwing {
     public static void aplicar() {
         try {
             UIManager.setLookAndFeel(new FlatLightLaf());
-            UIManager.put("Button.arc", 12);
-            UIManager.put("Component.arc", 12);
+            UIManager.put("Button.arc", 10);
+            UIManager.put("Component.arc", 8);
             UIManager.put("ProgressBar.arc", 12);
             UIManager.put("TextComponent.arc", 12);
+            UIManager.put("TabbedPane.tabHeight", 38);
+            UIManager.put("Table.rowHeight", 30);
+            UIManager.put("Table.showHorizontalLines", true);
+            UIManager.put("Table.showVerticalLines", false);
 
         } catch (UnsupportedLookAndFeelException e) {
             throw new IllegalStateException(
