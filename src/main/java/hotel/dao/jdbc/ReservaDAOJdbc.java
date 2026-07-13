@@ -4,6 +4,7 @@ import hotel.conexion.ProveedorConexion;
 
 import hotel.dao.ReservaDAO;
 
+import hotel.modelo.entidades.Cliente;
 import hotel.modelo.entidades.Reserva;
 import hotel.modelo.entidades.constantes.EstadoReserva;
 import hotel.modelo.sesion.ProveedorHotelId;
@@ -14,6 +15,8 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 /**
  * Implementacion JDBC de {@link ReservaDAO} para reservas del tenant activo.
@@ -108,6 +111,77 @@ public final class ReservaDAOJdbc implements ReservaDAO {
     }
 
     @Override
+    public void asociarHuesped(
+            int reservaId,
+            int clienteId,
+            boolean principal
+    ) {
+        String sql
+                = "INSERT INTO reserva_huespedes "
+                + "(hotel_id, reserva_id, cliente_id, principal) "
+                + "VALUES (?, ?, ?, ?) "
+                + "ON CONFLICT (hotel_id, reserva_id, cliente_id) "
+                + "DO UPDATE SET principal = EXCLUDED.principal";
+
+        ejecutorDAO.ejecutarModificacion(
+                sql,
+                proveedorHotelId.getHotelId(),
+                reservaId,
+                clienteId,
+                principal
+        );
+    }
+
+    @Override
+    public List<Cliente> listarHuespedes(int reservaId) {
+        String sql
+                = "SELECT c.id, c.hotel_id, c.nombre_completo, "
+                + "c.documento_identidad, c.telefono "
+                + "FROM reserva_huespedes rh "
+                + "JOIN clientes c "
+                + "ON c.hotel_id = rh.hotel_id "
+                + "AND c.id = rh.cliente_id "
+                + "WHERE rh.hotel_id = ? "
+                + "AND rh.reserva_id = ? "
+                + "ORDER BY rh.principal DESC, c.nombre_completo";
+
+        return ejecutorDAO.consultarLista(
+                sql,
+                this::mapearCliente,
+                proveedorHotelId.getHotelId(),
+                reservaId
+        );
+    }
+
+    @Override
+    public Map<Integer, List<Cliente>> listarHuespedesPorReserva() {
+        String sql = "SELECT rh.reserva_id, c.id, c.hotel_id, "
+                + "c.nombre_completo, c.documento_identidad, c.telefono "
+                + "FROM reserva_huespedes rh "
+                + "JOIN clientes c ON c.hotel_id = rh.hotel_id "
+                + "AND c.id = rh.cliente_id "
+                + "WHERE rh.hotel_id = ? "
+                + "ORDER BY rh.reserva_id, rh.principal DESC, "
+                + "c.nombre_completo";
+        List<AsociacionHuesped> asociaciones = ejecutorDAO.consultarLista(
+                sql,
+                resultado -> new AsociacionHuesped(
+                        resultado.getInt("reserva_id"),
+                        mapearCliente(resultado)
+                ),
+                proveedorHotelId.getHotelId()
+        );
+        Map<Integer, List<Cliente>> resultado = new LinkedHashMap<>();
+        for (AsociacionHuesped asociacion : asociaciones) {
+            resultado.computeIfAbsent(
+                    asociacion.reservaId(),
+                    id -> new java.util.ArrayList<>()
+            ).add(asociacion.cliente());
+        }
+        return resultado;
+    }
+
+    @Override
     public boolean actualizar(Reserva reserva) {
         exigirId(reserva.getId());
         String sql
@@ -162,11 +236,24 @@ public final class ReservaDAOJdbc implements ReservaDAO {
         );
     }
 
+    private Cliente mapearCliente(ResultSet resultado) throws SQLException {
+        return new Cliente(
+                resultado.getInt("id"),
+                resultado.getInt("hotel_id"),
+                resultado.getString("nombre_completo"),
+                resultado.getString("documento_identidad"),
+                resultado.getString("telefono")
+        );
+    }
+
     private void exigirId(Integer id) {
         if (id == null) {
             throw new IllegalArgumentException(
                     "La reserva debe tener id para actualizarse"
             );
         }
+    }
+
+    private record AsociacionHuesped(int reservaId, Cliente cliente) {
     }
 }

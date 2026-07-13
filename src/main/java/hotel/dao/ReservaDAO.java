@@ -1,9 +1,11 @@
 package hotel.dao;
 
 import hotel.modelo.entidades.Reserva;
+import hotel.modelo.entidades.Cliente;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
 
 public interface ReservaDAO {
 
@@ -12,6 +14,12 @@ public interface ReservaDAO {
     List<Reserva> listar();
 
     Reserva crear(Reserva reserva);
+
+    void asociarHuesped(int reservaId, int clienteId, boolean principal);
+
+    List<Cliente> listarHuespedes(int reservaId);
+
+    Map<Integer, List<Cliente>> listarHuespedesPorReserva();
 
     boolean actualizar(Reserva reserva);
 

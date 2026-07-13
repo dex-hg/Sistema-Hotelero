@@ -2,12 +2,14 @@ package hotel.patrones.estructural;
 
 import hotel.dao.ReservaDAO;
 
+import hotel.modelo.entidades.Cliente;
 import hotel.modelo.entidades.Reserva;
 import hotel.modelo.sesion.ProveedorHotelId;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Map;
 
 import hotel.excepcion.AccesoTenantException;
 
@@ -57,6 +59,28 @@ public final class ReservaDAOProxy implements ReservaDAO {
     public Reserva crear(Reserva reserva) {
         exigirMismoHotel(reserva.getHotelId());
         return daoReal.crear(reserva);
+    }
+
+    @Override
+    public void asociarHuesped(
+            int reservaId,
+            int clienteId,
+            boolean principal
+    ) {
+        exigirSesion();
+        daoReal.asociarHuesped(reservaId, clienteId, principal);
+    }
+
+    @Override
+    public List<Cliente> listarHuespedes(int reservaId) {
+        exigirSesion();
+        return daoReal.listarHuespedes(reservaId);
+    }
+
+    @Override
+    public Map<Integer, List<Cliente>> listarHuespedesPorReserva() {
+        exigirSesion();
+        return daoReal.listarHuespedesPorReserva();
     }
 
     @Override
