@@ -39,7 +39,7 @@ CREATE TABLE habitaciones (
     CONSTRAINT uq_habitacion_por_hotel UNIQUE (hotel_id, numero),
     CONSTRAINT uq_habitacion_tenant_id UNIQUE (hotel_id, id),
     CONSTRAINT chk_habitaciones_precio CHECK (precio_por_noche >= 0),
-    CONSTRAINT chk_habitaciones_camas CHECK (cantidad_camas > 0),
+    CONSTRAINT chk_habitaciones_camas CHECK (cantidad_camas > 0)
 );
 
 CREATE TABLE clientes (
@@ -73,7 +73,23 @@ CREATE TABLE reservas (
         REFERENCES clientes(hotel_id, id),
     CONSTRAINT uq_reserva_tenant_id UNIQUE (hotel_id, id),
     CONSTRAINT chk_reservas_fechas CHECK (fecha_salida > fecha_ingreso),
-    CONSTRAINT chk_reservas_total CHECK (total_pagado >= 0),
+    CONSTRAINT chk_reservas_total CHECK (total_pagado >= 0)
+);
+
+CREATE TABLE reserva_huespedes (
+    hotel_id INT NOT NULL,
+    reserva_id INT NOT NULL,
+    cliente_id INT NOT NULL,
+    principal BOOLEAN NOT NULL DEFAULT FALSE,
+    PRIMARY KEY (hotel_id, reserva_id, cliente_id),
+    CONSTRAINT fk_reserva_huespedes_reserva
+        FOREIGN KEY (hotel_id, reserva_id)
+        REFERENCES reservas(hotel_id, id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_reserva_huespedes_cliente
+        FOREIGN KEY (hotel_id, cliente_id)
+        REFERENCES clientes(hotel_id, id)
+        ON DELETE CASCADE
 );
 
 CREATE INDEX idx_usuarios_hotel ON usuarios(hotel_id);
@@ -82,6 +98,10 @@ CREATE INDEX idx_clientes_hotel ON clientes(hotel_id);
 CREATE INDEX idx_reservas_hotel ON reservas(hotel_id);
 CREATE INDEX idx_reservas_habitacion ON reservas(hotel_id, habitacion_id);
 CREATE INDEX idx_reservas_cliente ON reservas(hotel_id, cliente_id);
+CREATE INDEX idx_reserva_huespedes_reserva
+    ON reserva_huespedes(hotel_id, reserva_id);
+CREATE INDEX idx_reserva_huespedes_cliente
+    ON reserva_huespedes(hotel_id, cliente_id);
 
 INSERT INTO hoteles (nombre, ruc, direccion) VALUES
 ('Hotel Central', '20123456789', 'Av. Principal 1000, Lima'),
