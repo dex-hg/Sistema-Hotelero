@@ -39,7 +39,13 @@ CREATE TABLE habitaciones (
     CONSTRAINT uq_habitacion_por_hotel UNIQUE (hotel_id, numero),
     CONSTRAINT uq_habitacion_tenant_id UNIQUE (hotel_id, id),
     CONSTRAINT chk_habitaciones_precio CHECK (precio_por_noche >= 0),
-    CONSTRAINT chk_habitaciones_camas CHECK (cantidad_camas > 0)
+    CONSTRAINT chk_habitaciones_camas CHECK (cantidad_camas > 0),
+    CONSTRAINT chk_habitaciones_tipo CHECK (
+        tipo IN ('INDIVIDUAL', 'DOBLE', 'MATRIMONIAL', 'FAMILIAR')
+    ),
+    CONSTRAINT chk_habitaciones_estado CHECK (
+        estado IN ('DISPONIBLE', 'OCUPADA', 'EN_LIMPIEZA', 'MANTENIMIENTO')
+    )
 );
 
 CREATE TABLE clientes (
@@ -61,7 +67,8 @@ CREATE TABLE reservas (
     cliente_id INT NOT NULL,
     fecha_ingreso TIMESTAMP NOT NULL,
     fecha_salida TIMESTAMP NOT NULL,
-    total_pagado NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
+    total_hospedaje NUMERIC(10, 2) NOT NULL,
+    monto_pagado NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
     estado_reserva VARCHAR(30) NOT NULL DEFAULT 'ACTIVA',
     CONSTRAINT fk_reservas_hotel
         FOREIGN KEY (hotel_id) REFERENCES hoteles(id) ON DELETE CASCADE,
@@ -73,7 +80,12 @@ CREATE TABLE reservas (
         REFERENCES clientes(hotel_id, id),
     CONSTRAINT uq_reserva_tenant_id UNIQUE (hotel_id, id),
     CONSTRAINT chk_reservas_fechas CHECK (fecha_salida > fecha_ingreso),
-    CONSTRAINT chk_reservas_total CHECK (total_pagado >= 0)
+    CONSTRAINT chk_reservas_total CHECK (total_hospedaje >= 0),
+    CONSTRAINT chk_reservas_pago CHECK (
+        monto_pagado >= 0 AND monto_pagado <= total_hospedaje
+    ),
+    CONSTRAINT chk_reservas_estado
+        CHECK (estado_reserva IN ('ACTIVA', 'FINALIZADA', 'CANCELADA'))
 );
 
 CREATE TABLE reserva_huespedes (
@@ -102,6 +114,10 @@ CREATE INDEX idx_reserva_huespedes_reserva
     ON reserva_huespedes(hotel_id, reserva_id);
 CREATE INDEX idx_reserva_huespedes_cliente
     ON reserva_huespedes(hotel_id, cliente_id);
+
+CREATE UNIQUE INDEX uq_reserva_huesped_principal
+    ON reserva_huespedes(hotel_id, reserva_id)
+    WHERE principal;
 
 INSERT INTO hoteles (nombre, ruc, direccion) VALUES
 ('Hotel Central', '20123456789', 'Av. Principal 1000, Lima'),

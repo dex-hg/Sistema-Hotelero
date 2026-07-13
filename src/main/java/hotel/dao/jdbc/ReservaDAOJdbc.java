@@ -33,7 +33,8 @@ public final class ReservaDAOJdbc implements ReservaDAO {
             + "cliente_id, "
             + "fecha_ingreso, "
             + "fecha_salida, "
-            + "total_pagado, "
+            + "total_hospedaje, "
+            + "monto_pagado, "
             + "estado_reserva";
 
     private final ProveedorHotelId proveedorHotelId;
@@ -85,8 +86,8 @@ public final class ReservaDAOJdbc implements ReservaDAO {
                 = "INSERT INTO reservas "
                 + "(hotel_id, habitacion_id, cliente_id, "
                 + "fecha_ingreso, fecha_salida, "
-                + "total_pagado, estado_reserva) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+                + "total_hospedaje, monto_pagado, estado_reserva) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
         int id = ejecutorDAO.crearYObtenerId(sql,
                 proveedorHotelId.getHotelId(),
@@ -94,7 +95,8 @@ public final class ReservaDAOJdbc implements ReservaDAO {
                 reserva.getClienteId(),
                 reserva.getFechaIngreso(),
                 reserva.getFechaSalida(),
-                reserva.getTotalPagado(),
+                reserva.getTotalHospedaje(),
+                reserva.getMontoPagado(),
                 reserva.getEstado().name()
         );
 
@@ -105,7 +107,8 @@ public final class ReservaDAOJdbc implements ReservaDAO {
                 reserva.getClienteId(),
                 reserva.getFechaIngreso(),
                 reserva.getFechaSalida(),
-                reserva.getTotalPagado(),
+                reserva.getTotalHospedaje(),
+                reserva.getMontoPagado(),
                 reserva.getEstado()
         );
     }
@@ -182,13 +185,35 @@ public final class ReservaDAOJdbc implements ReservaDAO {
     }
 
     @Override
+    public boolean existeReservaActivaParaCliente(int clienteId) {
+        String sql = "SELECT EXISTS ("
+                + "SELECT 1 FROM reservas r "
+                + "WHERE r.hotel_id = ? "
+                + "AND r.estado_reserva = 'ACTIVA' "
+                + "AND (r.cliente_id = ? OR EXISTS ("
+                + "SELECT 1 FROM reserva_huespedes rh "
+                + "WHERE rh.hotel_id = r.hotel_id "
+                + "AND rh.reserva_id = r.id "
+                + "AND rh.cliente_id = ?))) AS existe";
+
+        return ejecutorDAO.consultarUno(
+                sql,
+                resultado -> resultado.getBoolean("existe"),
+                proveedorHotelId.getHotelId(),
+                clienteId,
+                clienteId
+        ).orElse(false);
+    }
+
+    @Override
     public boolean actualizar(Reserva reserva) {
         exigirId(reserva.getId());
         String sql
                 = "UPDATE reservas "
                 + "SET habitacion_id = ?, cliente_id = ?, "
                 + "fecha_ingreso = ?, fecha_salida = ?, "
-                + "total_pagado = ?, estado_reserva = ? "
+                + "total_hospedaje = ?, monto_pagado = ?, "
+                + "estado_reserva = ? "
                 + "WHERE hotel_id = ? "
                 + "AND id = ?";
 
@@ -198,7 +223,8 @@ public final class ReservaDAOJdbc implements ReservaDAO {
                 reserva.getClienteId(),
                 reserva.getFechaIngreso(),
                 reserva.getFechaSalida(),
-                reserva.getTotalPagado(),
+                reserva.getTotalHospedaje(),
+                reserva.getMontoPagado(),
                 reserva.getEstado().name(),
                 proveedorHotelId.getHotelId(),
                 reserva.getId()
@@ -229,7 +255,8 @@ public final class ReservaDAOJdbc implements ReservaDAO {
                         .toLocalDateTime(),
                 resultado.getTimestamp("fecha_salida")
                         .toLocalDateTime(),
-                resultado.getBigDecimal("total_pagado"),
+                resultado.getBigDecimal("total_hospedaje"),
+                resultado.getBigDecimal("monto_pagado"),
                 EstadoReserva.valueOf(
                         resultado.getString("estado_reserva")
                 )

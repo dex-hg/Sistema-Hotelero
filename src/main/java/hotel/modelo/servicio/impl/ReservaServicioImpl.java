@@ -1,7 +1,6 @@
 package hotel.modelo.servicio.impl;
 
 import hotel.conexion.EjecutorTransaccional;
-import hotel.conexion.OperacionTransaccional;
 
 import hotel.dao.ClienteDAO;
 import hotel.dao.HabitacionDAO;
@@ -12,6 +11,7 @@ import hotel.modelo.entidades.Habitacion;
 import hotel.modelo.entidades.Reserva;
 import hotel.modelo.entidades.constantes.EstadoHabitacion;
 import hotel.modelo.entidades.constantes.EstadoReserva;
+import hotel.modelo.seguridad.AutorizadorAcceso;
 import hotel.modelo.sesion.ProveedorHotelId;
 import hotel.modelo.servicio.DatosHuespedRecepcion;
 import hotel.modelo.servicio.ReservaServicio;
@@ -48,26 +48,7 @@ public final class ReservaServicioImpl implements ReservaServicio {
     private final ClienteDAO clienteDAO;
     private final ProveedorHotelId proveedorHotelId;
     private final EjecutorTransaccional ejecutorTransaccional;
-
-    public ReservaServicioImpl(
-            ReservaDAO reservaDAO,
-            HabitacionDAO habitacionDAO,
-            ClienteDAO clienteDAO,
-            ProveedorHotelId proveedorHotelId
-    ) {
-        this(
-                reservaDAO,
-                habitacionDAO,
-                clienteDAO,
-                proveedorHotelId,
-                new EjecutorTransaccional() {
-            @Override
-            public <T> T ejecutar(OperacionTransaccional<T> operacion) {
-                return operacion.ejecutar();
-            }
-        }
-        );
-    }
+    private final AutorizadorAcceso autorizadorAcceso;
 
     /**
      * Constructor para inyección de dependencias completa.
@@ -85,7 +66,8 @@ public final class ReservaServicioImpl implements ReservaServicio {
             HabitacionDAO habitacionDAO,
             ClienteDAO clienteDAO,
             ProveedorHotelId proveedorHotelId,
-            EjecutorTransaccional ejecutorTransaccional
+            EjecutorTransaccional ejecutorTransaccional,
+            AutorizadorAcceso autorizadorAcceso
     ) {
         this.reservaDAO = Objects.requireNonNull(reservaDAO);
         this.habitacionDAO = Objects.requireNonNull(habitacionDAO);
@@ -97,6 +79,7 @@ public final class ReservaServicioImpl implements ReservaServicio {
         this.ejecutorTransaccional = Objects.requireNonNull(
                 ejecutorTransaccional
         );
+        this.autorizadorAcceso = Objects.requireNonNull(autorizadorAcceso);
     }
 
     @Override
@@ -164,32 +147,38 @@ public final class ReservaServicioImpl implements ReservaServicio {
             int habitacionId,
             int clienteId,
             LocalDateTime fechaIngreso,
-            LocalDateTime fechaSalida,
-            BigDecimal totalPagado
+            LocalDateTime fechaSalida
     ) {
-        exigirHabitacionDisponible(habitacionId);
-        exigirDisponibilidadEnFechas(
-                habitacionId,
-                fechaIngreso,
-                fechaSalida
-        );
-
-        if (clienteDAO.buscarPorId(clienteId).isEmpty()) {
-            throw new ReglaNegocioException(
-                    "El cliente no pertenece al hotel activo"
+        autorizadorAcceso.exigirAdministrador();
+        return ejecutorTransaccional.ejecutar(() -> {
+            Habitacion habitacion
+                    = exigirHabitacionDisponibleParaActualizar(habitacionId);
+            exigirDisponibilidadEnFechas(
+                    habitacionId,
+                    fechaIngreso,
+                    fechaSalida
             );
-        }
 
-        Reserva reserva = new Reserva(
-                null, proveedorHotelId.getHotelId(),
-                habitacionId, clienteId,
-                fechaIngreso, fechaSalida,
-                totalPagado, EstadoReserva.ACTIVA
-        );
+            exigirHuespedDisponible(clienteId);
 
-        Reserva creada = reservaDAO.crear(reserva);
-        reservaDAO.asociarHuesped(creada.getId(), clienteId, true);
-        return creada;
+            Reserva creada = reservaDAO.crear(new Reserva(
+                    null,
+                    proveedorHotelId.getHotelId(),
+                    habitacionId,
+                    clienteId,
+                    fechaIngreso,
+                    fechaSalida,
+                    calcularTotalHospedaje(
+                            habitacion.getPrecioPorNoche(),
+                            fechaIngreso,
+                            fechaSalida
+                    ),
+                    BigDecimal.ZERO,
+                    EstadoReserva.ACTIVA
+            ));
+            reservaDAO.asociarHuesped(creada.getId(), clienteId, true);
+            return creada;
+        });
     }
 
     @Override
@@ -201,8 +190,6 @@ public final class ReservaServicioImpl implements ReservaServicio {
             LocalDateTime fechaIngreso,
             LocalDateTime fechaSalida
     ) {
-        Habitacion habitacion = exigirHabitacionDisponible(habitacionId);
-
         return registrarRecepcion(
                 nombreCompleto,
                 documentoIdentidad,
@@ -210,11 +197,6 @@ public final class ReservaServicioImpl implements ReservaServicio {
                 habitacionId,
                 fechaIngreso,
                 fechaSalida,
-                calcularTotalHospedaje(
-                        habitacion,
-                        fechaIngreso,
-                        fechaSalida
-                ),
                 List.of()
         );
     }
@@ -229,69 +211,6 @@ public final class ReservaServicioImpl implements ReservaServicio {
             LocalDateTime fechaSalida,
             List<DatosHuespedRecepcion> huespedesAdicionales
     ) {
-        Habitacion habitacion = exigirHabitacionDisponible(habitacionId);
-
-        return registrarRecepcion(
-                nombreCompleto,
-                documentoIdentidad,
-                telefono,
-                habitacionId,
-                fechaIngreso,
-                fechaSalida,
-                calcularTotalHospedaje(
-                        habitacion,
-                        fechaIngreso,
-                        fechaSalida
-                ),
-                huespedesAdicionales
-        );
-    }
-
-    /**
-     * Registra la recepción de un cliente (walk-in), creando o actualizando su
-     * ficha, insertando la reserva en estado ACTIVA y marcando la habitación
-     * como ocupada.
-     *
-     * METODO CLAVE DE NEGOCIO: - Coordina múltiples DAOs (Cliente, Reserva,
-     * Habitación) de forma coherente. - Transaccionalidad: Usa
-     * {@code ejecutorTransaccional.ejecutar} para asegurar que si falla alguna
-     * inserción o actualización, se realice un rollback completo de la base de
-     * datos.
-     */
-    @Override
-    public Reserva registrarRecepcion(
-            String nombreCompleto,
-            String documentoIdentidad,
-            String telefono,
-            int habitacionId,
-            LocalDateTime fechaIngreso,
-            LocalDateTime fechaSalida,
-            BigDecimal totalPagado
-    ) {
-        return registrarRecepcion(
-                nombreCompleto,
-                documentoIdentidad,
-                telefono,
-                habitacionId,
-                fechaIngreso,
-                fechaSalida,
-                totalPagado,
-                List.of()
-        );
-    }
-
-    @Override
-    public Reserva registrarRecepcion(
-            String nombreCompleto,
-            String documentoIdentidad,
-            String telefono,
-            int habitacionId,
-            LocalDateTime fechaIngreso,
-            LocalDateTime fechaSalida,
-            BigDecimal totalPagado,
-            List<DatosHuespedRecepcion> huespedesAdicionales
-    ) {
-
         return ejecutorTransaccional.ejecutar(() -> {
             List<DatosHuespedRecepcion> adicionales
                     = huespedesAdicionales == null
@@ -299,7 +218,12 @@ public final class ReservaServicioImpl implements ReservaServicio {
                             : huespedesAdicionales;
 
             Habitacion habitacion
-                    = exigirHabitacionDisponible(habitacionId);
+                    = exigirHabitacionDisponibleParaActualizar(habitacionId);
+            exigirDisponibilidadEnFechas(
+                    habitacionId,
+                    fechaIngreso,
+                    fechaSalida
+            );
 
             validarOcupacion(
                     habitacion,
@@ -312,6 +236,7 @@ public final class ReservaServicioImpl implements ReservaServicio {
                     documentoIdentidad,
                     telefono
             );
+            exigirHuespedDisponible(cliente.getId());
 
             Reserva reserva = reservaDAO.crear(new Reserva(
                     null,
@@ -320,7 +245,12 @@ public final class ReservaServicioImpl implements ReservaServicio {
                     cliente.getId(),
                     fechaIngreso,
                     fechaSalida,
-                    totalPagado,
+                    calcularTotalHospedaje(
+                            habitacion.getPrecioPorNoche(),
+                            fechaIngreso,
+                            fechaSalida
+                    ),
+                    BigDecimal.ZERO,
                     EstadoReserva.ACTIVA
             ));
             reservaDAO.asociarHuesped(reserva.getId(), cliente.getId(), true);
@@ -344,6 +274,7 @@ public final class ReservaServicioImpl implements ReservaServicio {
                     item.documentoIdentidad(),
                     item.telefono()
             );
+            exigirHuespedDisponible(huesped.getId());
             reservaDAO.asociarHuesped(
                     reserva.getId(),
                     huesped.getId(),
@@ -364,11 +295,24 @@ public final class ReservaServicioImpl implements ReservaServicio {
         }
     }
 
-    private BigDecimal calcularTotalHospedaje(
-            Habitacion habitacion,
+    @Override
+    public BigDecimal calcularTotalHospedaje(
+            BigDecimal precioPorNoche,
             LocalDateTime fechaIngreso,
             LocalDateTime fechaSalida
     ) {
+        Objects.requireNonNull(precioPorNoche, "precioPorNoche es obligatorio");
+        if (precioPorNoche.signum() < 0) {
+            throw new ReglaNegocioException(
+                    "El precio por noche no puede ser negativo"
+            );
+        }
+        if (fechaIngreso == null || fechaSalida == null
+                || !fechaSalida.isAfter(fechaIngreso)) {
+            throw new ReglaNegocioException(
+                    "La salida debe ser posterior al ingreso"
+            );
+        }
         long dias = ChronoUnit.DAYS.between(
                 fechaIngreso.toLocalDate(),
                 fechaSalida.toLocalDate()
@@ -376,7 +320,7 @@ public final class ReservaServicioImpl implements ReservaServicio {
 
         long diasFacturables = Math.max(1, dias);
 
-        return habitacion.getPrecioPorNoche().multiply(
+        return precioPorNoche.multiply(
                 BigDecimal.valueOf(diasFacturables)
         );
     }
@@ -444,6 +388,7 @@ public final class ReservaServicioImpl implements ReservaServicio {
 
     @Override
     public Reserva cancelar(int reservaId) {
+        autorizadorAcceso.exigirAdministrador();
         Reserva reserva = exigirActiva(reservaId);
         reserva.cambiarEstado(EstadoReserva.CANCELADA);
         persistir(reserva);
@@ -453,6 +398,7 @@ public final class ReservaServicioImpl implements ReservaServicio {
 
     @Override
     public Reserva cancelarRecepcion(int reservaId) {
+        autorizadorAcceso.exigirAdministrador();
         return ejecutorTransaccional.ejecutar(() -> {
             Reserva reserva = exigirActiva(reservaId);
             Habitacion habitacion = buscarHabitacionDeReserva(reserva);
@@ -484,6 +430,7 @@ public final class ReservaServicioImpl implements ReservaServicio {
 
     @Override
     public boolean eliminar(int id) {
+        autorizadorAcceso.exigirAdministrador();
         return reservaDAO.eliminar(id);
     }
 
@@ -553,8 +500,11 @@ public final class ReservaServicioImpl implements ReservaServicio {
         );
     }
 
-    private Habitacion exigirHabitacionDisponible(int habitacionId) {
-        Habitacion habitacion = habitacionDAO.buscarPorId(habitacionId)
+    private Habitacion exigirHabitacionDisponibleParaActualizar(
+            int habitacionId
+    ) {
+        Habitacion habitacion = habitacionDAO
+                .buscarPorIdParaActualizar(habitacionId)
                 .orElseThrow(() -> new ReglaNegocioException(
                 "La habitación no pertenece al hotel activo"
         ));
@@ -565,6 +515,20 @@ public final class ReservaServicioImpl implements ReservaServicio {
             );
         }
         return habitacion;
+    }
+
+    private Cliente exigirHuespedDisponible(int clienteId) {
+        Cliente cliente = clienteDAO.buscarPorIdParaActualizar(clienteId)
+                .orElseThrow(() -> new ReglaNegocioException(
+                "El huésped no pertenece al hotel activo"
+        ));
+        if (reservaDAO.existeReservaActivaParaCliente(clienteId)) {
+            throw new ReglaNegocioException(
+                    "El huésped " + cliente.getNombreCompleto()
+                    + " ya pertenece a una reserva activa"
+            );
+        }
+        return cliente;
     }
 
     private void exigirDisponibilidadEnFechas(

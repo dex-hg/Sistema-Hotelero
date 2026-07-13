@@ -15,7 +15,8 @@ public final class Reserva {
 
     private final LocalDateTime fechaIngreso;
     private final LocalDateTime fechaSalida;
-    private BigDecimal totalPagado;
+    private final BigDecimal totalHospedaje;
+    private BigDecimal montoPagado;
     private EstadoReserva estado;
 
     public Reserva(
@@ -25,7 +26,8 @@ public final class Reserva {
             int clienteId,
             LocalDateTime fechaIngreso,
             LocalDateTime fechaSalida,
-            BigDecimal totalPagado,
+            BigDecimal totalHospedaje,
+            BigDecimal montoPagado,
             EstadoReserva estado) {
 
         if (hotelId <= 0 || habitacionId <= 0 || clienteId <= 0) {
@@ -48,9 +50,19 @@ public final class Reserva {
             );
         }
 
-        if (totalPagado == null || totalPagado.signum() < 0) {
+        if (totalHospedaje == null || totalHospedaje.signum() < 0) {
             throw new IllegalArgumentException(
-                    "totalPagado no puede ser negativo"
+                    "totalHospedaje no puede ser negativo"
+            );
+        }
+        if (montoPagado == null || montoPagado.signum() < 0) {
+            throw new IllegalArgumentException(
+                    "montoPagado no puede ser negativo"
+            );
+        }
+        if (montoPagado.compareTo(totalHospedaje) > 0) {
+            throw new IllegalArgumentException(
+                    "montoPagado no puede superar el total del hospedaje"
             );
         }
 
@@ -58,7 +70,8 @@ public final class Reserva {
         this.hotelId = hotelId;
         this.habitacionId = habitacionId;
         this.clienteId = clienteId;
-        this.totalPagado = totalPagado;
+        this.totalHospedaje = totalHospedaje;
+        this.montoPagado = montoPagado;
         this.estado = Objects.requireNonNull(
                 estado,
                 "estado es obligatorio"
@@ -89,8 +102,12 @@ public final class Reserva {
         return fechaSalida;
     }
 
-    public BigDecimal getTotalPagado() {
-        return totalPagado;
+    public BigDecimal getTotalHospedaje() {
+        return totalHospedaje;
+    }
+
+    public BigDecimal getMontoPagado() {
+        return montoPagado;
     }
 
     public EstadoReserva getEstado() {
@@ -104,7 +121,13 @@ public final class Reserva {
             );
         }
 
-        totalPagado = totalPagado.add(monto);
+        BigDecimal nuevoMonto = montoPagado.add(monto);
+        if (nuevoMonto.compareTo(totalHospedaje) > 0) {
+            throw new IllegalArgumentException(
+                    "El pago supera el saldo pendiente de la reserva"
+            );
+        }
+        montoPagado = nuevoMonto;
     }
 
     public void cambiarEstado(EstadoReserva estado) {

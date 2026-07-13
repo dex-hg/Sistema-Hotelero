@@ -20,12 +20,17 @@ public interface ReservaServicio {
 
     Map<Integer, List<Cliente>> listarHuespedesPorReserva();
 
+    BigDecimal calcularTotalHospedaje(
+            BigDecimal precioPorNoche,
+            LocalDateTime fechaIngreso,
+            LocalDateTime fechaSalida
+    );
+
     Reserva crear(
             int habitacionId,
             int clienteId,
             LocalDateTime fechaIngreso,
-            LocalDateTime fechaSalida,
-            BigDecimal totalPagado
+            LocalDateTime fechaSalida
     );
 
     Reserva registrarRecepcion(
@@ -44,27 +49,6 @@ public interface ReservaServicio {
             int habitacionId,
             LocalDateTime fechaIngreso,
             LocalDateTime fechaSalida,
-            List<DatosHuespedRecepcion> huespedesAdicionales
-    );
-
-    Reserva registrarRecepcion(
-            String nombreCompleto,
-            String documentoIdentidad,
-            String telefono,
-            int habitacionId,
-            LocalDateTime fechaIngreso,
-            LocalDateTime fechaSalida,
-            BigDecimal totalPagado
-    );
-
-    Reserva registrarRecepcion(
-            String nombreCompleto,
-            String documentoIdentidad,
-            String telefono,
-            int habitacionId,
-            LocalDateTime fechaIngreso,
-            LocalDateTime fechaSalida,
-            BigDecimal totalPagado,
             List<DatosHuespedRecepcion> huespedesAdicionales
     );
 

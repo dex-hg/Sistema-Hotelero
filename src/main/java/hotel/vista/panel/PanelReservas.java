@@ -29,7 +29,6 @@ import java.awt.Insets;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -52,11 +51,12 @@ public final class PanelReservas extends JPanel implements PanelActualizable {
     private final DefaultTableModel modelo = VistaUtil.modeloTabla(
             new Object[]{
                 "ID", "Habitación", "Huésped", "Ingreso",
-                "Salida", "Total", "Estado"
+                "Salida", "Total", "Pagado", "Estado"
             },
             new Class<?>[]{
                 Integer.class, String.class, String.class, String.class,
-                String.class, BigDecimal.class, EstadoReserva.class
+                String.class, BigDecimal.class, BigDecimal.class,
+                EstadoReserva.class
             }
     );
 
@@ -250,6 +250,7 @@ public final class PanelReservas extends JPanel implements PanelActualizable {
                 this,
                 null,
                 () -> {
+                    reservas.finalizarVencidas();
                     List<Reserva> listadoReservas = reservas.listar();
                     return new DatosPanel(
                             habitaciones.listar(),
@@ -308,7 +309,8 @@ public final class PanelReservas extends JPanel implements PanelActualizable {
                         : clienteItem.getNombreCompleto(),
                 VistaUtil.FORMATO_FECHA.format(reserva.getFechaIngreso()),
                 VistaUtil.FORMATO_FECHA.format(reserva.getFechaSalida()),
-                reserva.getTotalPagado(),
+                reserva.getTotalHospedaje(),
+                reserva.getMontoPagado(),
                 reserva.getEstado()
             });
         }
@@ -341,7 +343,8 @@ public final class PanelReservas extends JPanel implements PanelActualizable {
                 activa && estadoHabitacion == EstadoHabitacion.DISPONIBLE
         );
         botonCheckOut.setEnabled(
-                finalizada && (estadoHabitacion == EstadoHabitacion.OCUPADA
+                (activa || finalizada)
+                && (estadoHabitacion == EstadoHabitacion.OCUPADA
                 || estadoHabitacion == EstadoHabitacion.EN_LIMPIEZA)
         );
         botonCancelar.setEnabled(activa);
@@ -358,11 +361,6 @@ public final class PanelReservas extends JPanel implements PanelActualizable {
         }
         LocalDateTime fechaIngreso = VistaUtil.fecha(ingreso.getText());
         LocalDateTime fechaSalida = VistaUtil.fecha(salida.getText());
-        BigDecimal total = calcularTotal(
-                habitacionItem.precio(),
-                fechaIngreso,
-                fechaSalida
-        );
         VistaUtil.ejecutarAsync(
                 this,
                 botonCrear,
@@ -370,8 +368,7 @@ public final class PanelReservas extends JPanel implements PanelActualizable {
                         habitacionItem.id(),
                         clienteItem.id(),
                         fechaIngreso,
-                        fechaSalida,
-                        total
+                        fechaSalida
                 ),
                 creada -> {
                     limpiarReserva();
@@ -447,7 +444,7 @@ public final class PanelReservas extends JPanel implements PanelActualizable {
             return;
         }
         try {
-            totalCalculado.setText(calcularTotal(
+            totalCalculado.setText(reservas.calcularTotalHospedaje(
                     item.precio(),
                     VistaUtil.fecha(ingreso.getText()),
                     VistaUtil.fecha(salida.getText())
@@ -455,23 +452,6 @@ public final class PanelReservas extends JPanel implements PanelActualizable {
         } catch (RuntimeException e) {
             totalCalculado.setText("Fecha inválida");
         }
-    }
-
-    private BigDecimal calcularTotal(
-            BigDecimal precio,
-            LocalDateTime fechaIngreso,
-            LocalDateTime fechaSalida
-    ) {
-        if (!fechaSalida.isAfter(fechaIngreso)) {
-            throw new IllegalArgumentException(
-                    "La salida debe ser posterior al ingreso"
-            );
-        }
-        long dias = ChronoUnit.DAYS.between(
-                fechaIngreso.toLocalDate(),
-                fechaSalida.toLocalDate()
-        );
-        return precio.multiply(BigDecimal.valueOf(Math.max(1, dias)));
     }
 
     private void deshabilitarAcciones() {

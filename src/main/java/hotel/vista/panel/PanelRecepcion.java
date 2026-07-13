@@ -36,13 +36,14 @@ import java.awt.event.MouseEvent;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Map;
 
 public final class PanelRecepcion extends JPanel implements PanelActualizable {
+
+    private static final int COLUMNA_ESTADO_RESERVA = 7;
 
     private final ClienteControlador clientes;
     private final HabitacionControlador habitaciones;
@@ -84,12 +85,14 @@ public final class PanelRecepcion extends JPanel implements PanelActualizable {
                 "Huéspedes",
                 "Ingreso",
                 "Salida",
+                "Total",
                 "Pagado",
                 "Estado"
             },
             new Class<?>[]{
                 Integer.class, Integer.class, String.class, String.class,
-                String.class, BigDecimal.class, EstadoReserva.class
+                String.class, BigDecimal.class, BigDecimal.class,
+                EstadoReserva.class
             }
     );
     private final DefaultTableModel modeloHuespedesAdicionales
@@ -104,12 +107,14 @@ public final class PanelRecepcion extends JPanel implements PanelActualizable {
                 "Huéspedes",
                 "Ingreso",
                 "Salida",
+                "Total",
                 "Pagado",
                 "Estado"
             },
             new Class<?>[]{
                 Integer.class, Integer.class, String.class, String.class,
-                String.class, BigDecimal.class, EstadoReserva.class
+                String.class, BigDecimal.class, BigDecimal.class,
+                EstadoReserva.class
             }
     );
 
@@ -624,6 +629,7 @@ public final class PanelRecepcion extends JPanel implements PanelActualizable {
                 this,
                 null,
                 () -> {
+                    reservas.finalizarVencidas();
                     List<Reserva> listadoReservas = reservas.listar();
                     return new DatosRecepcion(
                             clientes.listar(),
@@ -714,7 +720,8 @@ public final class PanelRecepcion extends JPanel implements PanelActualizable {
             formatoHuespedes(reserva),
             VistaUtil.FORMATO_FECHA.format(reserva.getFechaIngreso()),
             VistaUtil.FORMATO_FECHA.format(reserva.getFechaSalida()),
-            reserva.getTotalPagado(),
+            reserva.getTotalHospedaje(),
+            reserva.getMontoPagado(),
             reserva.getEstado()
         };
     }
@@ -800,7 +807,7 @@ public final class PanelRecepcion extends JPanel implements PanelActualizable {
             );
             EstadoReserva estado = (EstadoReserva) modeloFinalizadas.getValueAt(
                     fila,
-                    6
+                    COLUMNA_ESTADO_RESERVA
             );
             botonCheckOut.setEnabled(
                     estado == EstadoReserva.ACTIVA
@@ -898,20 +905,11 @@ public final class PanelRecepcion extends JPanel implements PanelActualizable {
         try {
             LocalDateTime fechaIngreso = VistaUtil.fecha(ingreso.getText());
             LocalDateTime fechaSalida = VistaUtil.fecha(salida.getText());
-            if (!fechaSalida.isAfter(fechaIngreso)) {
-                throw new IllegalArgumentException(
-                        "La salida debe ser posterior al ingreso"
-                );
-            }
-            long dias = ChronoUnit.DAYS.between(
-                    fechaIngreso.toLocalDate(),
-                    fechaSalida.toLocalDate()
-            );
-            long diasFacturables = Math.max(1, dias);
-
             totalCalculado.setText(
-                    item.precioPorNoche.multiply(
-                            BigDecimal.valueOf(diasFacturables)
+                    reservas.calcularTotalHospedaje(
+                            item.precioPorNoche,
+                            fechaIngreso,
+                            fechaSalida
                     ).toPlainString()
             );
         } catch (RuntimeException e) {

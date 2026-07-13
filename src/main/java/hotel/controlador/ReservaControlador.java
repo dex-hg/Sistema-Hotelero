@@ -40,19 +40,29 @@ public final class ReservaControlador {
         return servicio.listarHuespedesPorReserva();
     }
 
+    public BigDecimal calcularTotalHospedaje(
+            BigDecimal precioPorNoche,
+            LocalDateTime ingreso,
+            LocalDateTime salida
+    ) {
+        return servicio.calcularTotalHospedaje(
+                precioPorNoche,
+                ingreso,
+                salida
+        );
+    }
+
     public Reserva crear(
             int habitacionId,
             int clienteId,
             LocalDateTime ingreso,
-            LocalDateTime salida,
-            BigDecimal totalPagado
+            LocalDateTime salida
     ) {
         return servicio.crear(
                 habitacionId,
                 clienteId,
                 ingreso,
-                salida,
-                totalPagado
+                salida
         );
     }
 
@@ -90,48 +100,6 @@ public final class ReservaControlador {
                 habitacionId,
                 ingreso,
                 salida,
-                huespedesAdicionales
-        );
-    }
-
-    public Reserva registrarRecepcion(
-            String nombreCompleto,
-            String documentoIdentidad,
-            String telefono,
-            int habitacionId,
-            LocalDateTime ingreso,
-            LocalDateTime salida,
-            BigDecimal totalPagado
-    ) {
-        return servicio.registrarRecepcion(
-                nombreCompleto,
-                documentoIdentidad,
-                telefono,
-                habitacionId,
-                ingreso,
-                salida,
-                totalPagado
-        );
-    }
-
-    public Reserva registrarRecepcion(
-            String nombreCompleto,
-            String documentoIdentidad,
-            String telefono,
-            int habitacionId,
-            LocalDateTime ingreso,
-            LocalDateTime salida,
-            BigDecimal totalPagado,
-            List<DatosHuespedRecepcion> huespedesAdicionales
-    ) {
-        return servicio.registrarRecepcion(
-                nombreCompleto,
-                documentoIdentidad,
-                telefono,
-                habitacionId,
-                ingreso,
-                salida,
-                totalPagado,
                 huespedesAdicionales
         );
     }
