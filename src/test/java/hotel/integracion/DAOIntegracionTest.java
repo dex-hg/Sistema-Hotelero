@@ -63,8 +63,8 @@ import java.util.Optional;
 /**
  * Prueba de integracion ejecutable sin framework externo.
  *
- * Usa un esquema temporal y lo elimina al finalizar, por lo que no modifica
- * los datos existentes de sistema_hotel.
+ * Usa un esquema temporal y lo elimina al finalizar, por lo que no modifica los
+ * datos existentes de sistema_hotel.
  */
 public final class DAOIntegracionTest {
 
@@ -530,8 +530,7 @@ public final class DAOIntegracionTest {
     ) {
         String sql = "SELECT COUNT(*) FROM reserva_huespedes "
                 + "WHERE hotel_id = ? AND reserva_id = ?";
-        try (Connection conexion = conexiones.obtenerConexion();
-                PreparedStatement sentencia = conexion.prepareStatement(sql)) {
+        try (Connection conexion = conexiones.obtenerConexion(); PreparedStatement sentencia = conexion.prepareStatement(sql)) {
             sentencia.setInt(1, hotelId);
             sentencia.setInt(2, reservaId);
             try (ResultSet resultado = sentencia.executeQuery()) {
@@ -560,12 +559,6 @@ public final class DAOIntegracionTest {
                     sentencia.execute(bloque);
                 }
             }
-
-            String migracion = Files.readString(Path.of(
-                    "src/main/resources/db/migrations/"
-                    + "V2__integridad_reservas_y_estados.sql"
-            ));
-            sentencia.execute(migracion);
         }
     }
 
@@ -609,6 +602,11 @@ public final class DAOIntegracionTest {
 
         private ReservaDAOConFalloAsociacion(ReservaDAO delegado) {
             this.delegado = delegado;
+        }
+
+        @Override
+        public boolean existeReservaActivaParaCliente(int clienteId) {
+            return delegado.existeReservaActivaParaCliente(clienteId);
         }
 
         @Override
@@ -660,6 +658,7 @@ public final class DAOIntegracionTest {
 
     @FunctionalInterface
     private interface Accion {
+
         void ejecutar();
     }
 }
