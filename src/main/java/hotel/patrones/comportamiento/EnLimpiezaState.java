@@ -2,6 +2,8 @@ package hotel.patrones.comportamiento;
 
 import hotel.modelo.entidades.constantes.EstadoHabitacion;
 
+import java.util.Set;
+
 /**
  * Estado de limpieza de una habitacion.
  *
@@ -13,6 +15,14 @@ public final class EnLimpiezaState implements EstadoHabitacionState {
     @Override
     public EstadoHabitacion getEstado() {
         return EstadoHabitacion.EN_LIMPIEZA;
+    }
+
+    @Override
+    public Set<EstadoHabitacion> transicionesPermitidas() {
+        return Set.of(
+                EstadoHabitacion.DISPONIBLE,
+                EstadoHabitacion.MANTENIMIENTO
+        );
     }
 
     @Override

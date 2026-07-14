@@ -3,6 +3,8 @@ package hotel.patrones.comportamiento;
 import hotel.excepcion.TransicionEstadoHabitacionException;
 import hotel.modelo.entidades.constantes.EstadoHabitacion;
 
+import java.util.Set;
+
 /**
  * Interfaz que define las transiciones y comportamiento de cada estado de una
  * habitación (Disponible, Ocupada, Limpieza, Mantenimiento).
@@ -13,15 +15,18 @@ import hotel.modelo.entidades.constantes.EstadoHabitacion;
  * elimina la necesidad de sentencias condicionales complejas dentro de la
  * entidad {@code Habitacion}.
  *
- * APLICA PRINCIPIO SOLID: - OCP (Open/Closed Principle): El sistema está
- * abierto a la extensión (podemos agregar un nuevo estado como "Bloqueado" o
- * "Fuera de Servicio" implementando esta interfaz) pero cerrado a la
- * modificación (no necesitamos modificar las clases de los estados existentes
- * ni alterar la entidad principal {@code Habitacion}).
+ * APLICA PRINCIPIO SOLID: - OCP (Open/Closed Principle): Las reglas propias de
+ * cada estado se extienden en implementaciones separadas. Agregar un valor al
+ * enum todavía exige actualizar la fábrica que reconstruye el estado, pero no
+ * obliga a introducir condicionales de transición dentro de la entidad.
  */
 public interface EstadoHabitacionState {
 
     EstadoHabitacion getEstado();
+
+    default Set<EstadoHabitacion> transicionesPermitidas() {
+        return Set.of();
+    }
 
     default EstadoHabitacionState ocupar() {
         throw transicionInvalida("ocupar");

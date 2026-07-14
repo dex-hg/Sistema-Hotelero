@@ -11,6 +11,7 @@ import hotel.patrones.comportamiento.OcupadaState;
 
 import java.math.BigDecimal;
 import java.util.Objects;
+import java.util.Set;
 
 public final class Habitacion {
 
@@ -97,6 +98,10 @@ public final class Habitacion {
 
     public EstadoHabitacion getEstado() {
         return estado.getEstado();
+    }
+
+    public Set<EstadoHabitacion> getTransicionesPermitidas() {
+        return estado.transicionesPermitidas();
     }
 
     public void ocupar() {
