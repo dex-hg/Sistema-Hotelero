@@ -24,7 +24,15 @@ public interface HabitacionServicio {
             boolean tv
     );
 
-    boolean actualizar(Habitacion habitacion);
+    Habitacion actualizar(
+            int id,
+            String numero,
+            TipoHabitacion tipo,
+            BigDecimal precioPorNoche,
+            int cantidadCamas,
+            boolean banoPrivado,
+            boolean tv
+    );
 
     boolean eliminar(int id);
 

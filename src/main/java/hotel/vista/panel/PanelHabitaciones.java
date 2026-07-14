@@ -6,7 +6,6 @@ import hotel.modelo.entidades.Habitacion;
 import hotel.modelo.entidades.constantes.EstadoHabitacion;
 import hotel.modelo.entidades.constantes.TipoHabitacion;
 
-import hotel.patrones.creacional.HabitacionBuilder;
 import hotel.vista.VistaUtil;
 
 import javax.swing.JButton;
@@ -194,7 +193,6 @@ public final class PanelHabitaciones extends JPanel implements PanelActualizable
                     this,
                     this::eliminarAsync
             ));
-            agregarBoton(acciones, a, botonEliminar);
         }
 
         JButton limpiar = VistaUtil.botonSecundario("Limpiar formulario");
@@ -206,11 +204,12 @@ public final class PanelHabitaciones extends JPanel implements PanelActualizable
         datos.add(cabeceraFormulario, BorderLayout.NORTH);
         datos.add(formulario, BorderLayout.CENTER);
         if (botonCrear != null) {
-            JPanel guardar = new JPanel(new BorderLayout());
+            JPanel guardar = new JPanel(new GridLayout(0, 1, 0, 6));
             guardar.setBorder(
                     javax.swing.BorderFactory.createEmptyBorder(6, 6, 0, 6)
             );
-            guardar.add(botonCrear, BorderLayout.CENTER);
+            guardar.add(botonCrear);
+            guardar.add(botonEliminar);
             datos.add(guardar, BorderLayout.SOUTH);
         }
 
@@ -431,11 +430,11 @@ public final class PanelHabitaciones extends JPanel implements PanelActualizable
         }
 
         int fila = tabla.convertRowIndexToModel(tabla.getSelectedRow());
-        EstadoHabitacion estado = (EstadoHabitacion) modelo.getValueAt(
-                fila,
-                7
-        );
-        cargarTransicionesEstado(estado);
+        Habitacion habitacionSeleccionada = habitacionesCargadas.stream()
+                .filter(item -> item.getId().equals(seleccionado))
+                .findFirst()
+                .orElse(null);
+        cargarTransicionesEstado(habitacionSeleccionada);
         if (!administrador) {
             return;
         }
@@ -458,29 +457,20 @@ public final class PanelHabitaciones extends JPanel implements PanelActualizable
         }
     }
 
-    private void cargarTransicionesEstado(EstadoHabitacion actual) {
+    private void cargarTransicionesEstado(Habitacion habitacion) {
+        if (habitacion == null) {
+            return;
+        }
+        EstadoHabitacion actual = habitacion.getEstado();
         estadoActual.setText(VistaUtil.textoEnum(actual));
         nuevoEstado.removeAllItems();
 
-        switch (actual) {
-            case EN_LIMPIEZA -> {
-                nuevoEstado.addItem(EstadoHabitacion.DISPONIBLE);
-                if (administrador) {
-                    nuevoEstado.addItem(EstadoHabitacion.MANTENIMIENTO);
-                }
-            }
-            case DISPONIBLE -> {
-                if (administrador) {
-                    nuevoEstado.addItem(EstadoHabitacion.MANTENIMIENTO);
-                }
-            }
-            case MANTENIMIENTO -> {
-                if (administrador) {
-                    nuevoEstado.addItem(EstadoHabitacion.EN_LIMPIEZA);
-                }
-            }
-            case OCUPADA -> {
-                // El término de la reserva controla esta transición.
+        for (EstadoHabitacion destino : habitacion.getTransicionesPermitidas()) {
+            if (destino != EstadoHabitacion.OCUPADA
+                    && actual != EstadoHabitacion.OCUPADA
+                    && (administrador
+                    || destino != EstadoHabitacion.MANTENIMIENTO)) {
+                nuevoEstado.addItem(destino);
             }
         }
 
@@ -569,31 +559,15 @@ public final class PanelHabitaciones extends JPanel implements PanelActualizable
         VistaUtil.ejecutarAsync(
                 this,
                 botonCrear,
-                () -> {
-                    Habitacion actual = habitaciones.buscarPorId(habitacionId);
-                    HabitacionBuilder builder = new HabitacionBuilder()
-                            .conId(actual.getId())
-                            .paraHotel(actual.getHotelId())
-                            .conNumero(numeroValor)
-                            .deTipo(tipoValor)
-                            .conPrecioPorNoche(precioValor)
-                            .conCantidadCamas(camasValor)
-                            .conEstado(actual.getEstado());
-                    if (banoValor) {
-                        builder.conBanoPrivado();
-                    }
-                    if (tvValor) {
-                        builder.conTv();
-                    }
-                    boolean actualizado = habitaciones.actualizar(
-                            builder.construir()
-                    );
-                    VistaUtil.exigirExito(
-                            actualizado,
-                            "La habitación ya no existe"
-                    );
-                    return actualizado;
-                },
+                () -> habitaciones.actualizar(
+                        habitacionId,
+                        numeroValor,
+                        tipoValor,
+                        precioValor,
+                        camasValor,
+                        banoValor,
+                        tvValor
+                ),
                 actualizado -> {
                     limpiarFormulario();
                     refrescarAsync();

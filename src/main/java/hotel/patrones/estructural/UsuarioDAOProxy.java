@@ -4,6 +4,7 @@ import hotel.dao.UsuarioDAO;
 
 import hotel.modelo.entidades.Usuario;
 import hotel.modelo.sesion.ProveedorHotelId;
+import hotel.modelo.seguridad.AutorizadorAcceso;
 
 import java.util.List;
 import java.util.Objects;
@@ -25,13 +26,16 @@ public final class UsuarioDAOProxy implements UsuarioDAO {
 
     private final UsuarioDAO daoReal;
     private final ProveedorHotelId proveedorHotelId;
+    private final AutorizadorAcceso autorizadorAcceso;
 
     public UsuarioDAOProxy(
             UsuarioDAO daoReal,
-            ProveedorHotelId proveedorHotelId
+            ProveedorHotelId proveedorHotelId,
+            AutorizadorAcceso autorizadorAcceso
     ) {
         this.daoReal = Objects.requireNonNull(daoReal);
         this.proveedorHotelId = Objects.requireNonNull(proveedorHotelId);
+        this.autorizadorAcceso = Objects.requireNonNull(autorizadorAcceso);
     }
 
     @Override
@@ -54,18 +58,21 @@ public final class UsuarioDAOProxy implements UsuarioDAO {
 
     @Override
     public Usuario crear(Usuario usuario) {
+        autorizadorAcceso.exigirAdministrador();
         exigirMismoHotel(usuario.getHotelId());
         return daoReal.crear(usuario);
     }
 
     @Override
     public boolean actualizar(Usuario usuario) {
+        autorizadorAcceso.exigirAdministrador();
         exigirMismoHotel(usuario.getHotelId());
         return daoReal.actualizar(usuario);
     }
 
     @Override
     public boolean eliminar(int id) {
+        autorizadorAcceso.exigirAdministrador();
         exigirSesion();
         return daoReal.eliminar(id);
     }

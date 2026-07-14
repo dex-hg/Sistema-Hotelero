@@ -51,8 +51,13 @@ public final class ClienteControlador {
         );
     }
 
-    public boolean actualizar(Cliente cliente) {
-        return servicio.actualizar(cliente);
+    public Cliente actualizar(
+            int id,
+            String nombre,
+            String documento,
+            String telefono
+    ) {
+        return servicio.actualizar(id, nombre, documento, telefono);
     }
 
     public boolean eliminar(int id) {

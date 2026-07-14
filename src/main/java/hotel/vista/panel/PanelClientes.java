@@ -247,21 +247,12 @@ public final class PanelClientes extends JPanel implements PanelActualizable {
         VistaUtil.ejecutarAsync(
                 this,
                 botonActualizar,
-                () -> {
-                    Cliente actual = clientes.buscarPorId(clienteId);
-                    boolean actualizado = clientes.actualizar(new Cliente(
-                            actual.getId(),
-                            actual.getHotelId(),
-                            nombreValor,
-                            documentoValor,
-                            telefonoValor
-                    ));
-                    VistaUtil.exigirExito(
-                            actualizado,
-                            "El huésped ya no existe"
-                    );
-                    return actualizado;
-                },
+                () -> clientes.actualizar(
+                        clienteId,
+                        nombreValor,
+                        documentoValor,
+                        telefonoValor
+                ),
                 actualizado -> {
                     limpiarFormulario();
                     refrescarAsync();

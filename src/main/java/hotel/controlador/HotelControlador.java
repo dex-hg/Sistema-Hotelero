@@ -27,15 +27,4 @@ public final class HotelControlador {
         return servicio.listar();
     }
 
-    public Hotel crear(Hotel hotel) {
-        return servicio.crear(hotel);
-    }
-
-    public boolean actualizar(Hotel hotel) {
-        return servicio.actualizar(hotel);
-    }
-
-    public boolean eliminar(int id) {
-        return servicio.eliminar(id);
-    }
 }

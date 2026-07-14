@@ -13,9 +13,4 @@ public interface HotelServicio {
 
     List<Hotel> listar();
 
-    Hotel crear(Hotel hotel);
-
-    boolean actualizar(Hotel hotel);
-
-    boolean eliminar(int id);
 }

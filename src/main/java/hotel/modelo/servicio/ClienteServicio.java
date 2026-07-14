@@ -25,7 +25,12 @@ public interface ClienteServicio {
             String telefono
     );
 
-    boolean actualizar(Cliente cliente);
+    Cliente actualizar(
+            int id,
+            String nombreCompleto,
+            String documentoIdentidad,
+            String telefono
+    );
 
     boolean eliminar(int id);
 }

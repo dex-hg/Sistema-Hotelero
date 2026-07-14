@@ -3,6 +3,7 @@ package hotel.modelo.servicio.impl;
 import hotel.dao.ClienteDAO;
 
 import hotel.modelo.entidades.Cliente;
+import hotel.modelo.seguridad.AutorizadorAcceso;
 import hotel.modelo.sesion.ProveedorHotelId;
 import hotel.modelo.servicio.ClienteServicio;
 
@@ -24,13 +25,16 @@ public final class ClienteServicioImpl implements ClienteServicio {
 
     private final ClienteDAO clienteDAO;
     private final ProveedorHotelId proveedorHotelId;
+    private final AutorizadorAcceso autorizadorAcceso;
 
     public ClienteServicioImpl(
             ClienteDAO clienteDAO,
-            ProveedorHotelId proveedorHotelId
+            ProveedorHotelId proveedorHotelId,
+            AutorizadorAcceso autorizadorAcceso
     ) {
         this.clienteDAO = Objects.requireNonNull(clienteDAO);
         this.proveedorHotelId = Objects.requireNonNull(proveedorHotelId);
+        this.autorizadorAcceso = Objects.requireNonNull(autorizadorAcceso);
     }
 
     @Override
@@ -54,6 +58,19 @@ public final class ClienteServicioImpl implements ClienteServicio {
 
     @Override
     public Cliente crear(
+            String nombreCompleto,
+            String documentoIdentidad,
+            String telefono
+    ) {
+        autorizadorAcceso.exigirAdministrador();
+        return crearSinAutorizacion(
+                nombreCompleto,
+                documentoIdentidad,
+                telefono
+        );
+    }
+
+    private Cliente crearSinAutorizacion(
             String nombreCompleto,
             String documentoIdentidad,
             String telefono
@@ -82,12 +99,13 @@ public final class ClienteServicioImpl implements ClienteServicio {
             String documentoIdentidad,
             String telefono
     ) {
+        autorizadorAcceso.exigirAdministrador();
         Optional<Cliente> existente = clienteDAO.buscarPorDocumento(
                 documentoIdentidad
         );
 
         if (existente.isEmpty()) {
-            return crear(
+            return crearSinAutorizacion(
                     nombreCompleto,
                     documentoIdentidad,
                     telefono
@@ -114,17 +132,42 @@ public final class ClienteServicioImpl implements ClienteServicio {
     }
 
     @Override
-    public boolean actualizar(Cliente cliente) {
-        Objects.requireNonNull(
-                cliente,
-                "cliente es obligatorio"
+    public Cliente actualizar(
+            int id,
+            String nombreCompleto,
+            String documentoIdentidad,
+            String telefono
+    ) {
+        autorizadorAcceso.exigirAdministrador();
+        Cliente actual = buscarPorId(id);
+        Optional<Cliente> duplicado = clienteDAO.buscarPorDocumento(
+                documentoIdentidad
         );
+        if (duplicado.isPresent() && !duplicado.orElseThrow().getId().equals(id)) {
+            throw new ReglaNegocioException(
+                    "Ya existe un cliente con el documento "
+                    + documentoIdentidad
+            );
+        }
 
-        return clienteDAO.actualizar(cliente);
+        Cliente actualizado = new Cliente(
+                actual.getId(),
+                actual.getHotelId(),
+                nombreCompleto,
+                documentoIdentidad,
+                telefono
+        );
+        if (!clienteDAO.actualizar(actualizado)) {
+            throw new EntidadNoEncontradaException(
+                    "El cliente dejó de existir durante la actualización"
+            );
+        }
+        return actualizado;
     }
 
     @Override
     public boolean eliminar(int id) {
+        autorizadorAcceso.exigirAdministrador();
         return clienteDAO.eliminar(id);
     }
 }

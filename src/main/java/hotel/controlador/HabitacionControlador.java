@@ -46,8 +46,24 @@ public final class HabitacionControlador {
         );
     }
 
-    public boolean actualizar(Habitacion habitacion) {
-        return servicio.actualizar(habitacion);
+    public Habitacion actualizar(
+            int id,
+            String numero,
+            TipoHabitacion tipo,
+            BigDecimal precio,
+            int camas,
+            boolean banoPrivado,
+            boolean tv
+    ) {
+        return servicio.actualizar(
+                id,
+                numero,
+                tipo,
+                precio,
+                camas,
+                banoPrivado,
+                tv
+        );
     }
 
     public boolean eliminar(int id) {
