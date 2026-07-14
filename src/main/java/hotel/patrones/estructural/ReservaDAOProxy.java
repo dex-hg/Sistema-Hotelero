@@ -84,6 +84,12 @@ public final class ReservaDAOProxy implements ReservaDAO {
     }
 
     @Override
+    public boolean existeReservaActivaParaCliente(int clienteId) {
+        exigirSesion();
+        return daoReal.existeReservaActivaParaCliente(clienteId);
+    }
+
+    @Override
     public boolean actualizar(Reserva reserva) {
         exigirMismoHotel(reserva.getHotelId());
         return daoReal.actualizar(reserva);

@@ -21,6 +21,8 @@ public interface ReservaDAO {
 
     Map<Integer, List<Cliente>> listarHuespedesPorReserva();
 
+    boolean existeReservaActivaParaCliente(int clienteId);
+
     boolean actualizar(Reserva reserva);
 
     boolean eliminar(int id);

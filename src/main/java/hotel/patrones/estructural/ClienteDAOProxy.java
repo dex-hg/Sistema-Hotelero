@@ -43,6 +43,12 @@ public final class ClienteDAOProxy implements ClienteDAO {
     }
 
     @Override
+    public Optional<Cliente> buscarPorIdParaActualizar(int id) {
+        exigirSesion();
+        return daoReal.buscarPorIdParaActualizar(id);
+    }
+
+    @Override
     public Optional<Cliente> buscarPorDocumento(String documentoIdentidad) {
         exigirSesion();
         return daoReal.buscarPorDocumento(documentoIdentidad);

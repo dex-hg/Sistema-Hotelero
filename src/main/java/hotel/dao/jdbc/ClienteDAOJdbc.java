@@ -59,6 +59,22 @@ public final class ClienteDAOJdbc implements ClienteDAO {
     }
 
     @Override
+    public Optional<Cliente> buscarPorIdParaActualizar(int id) {
+        String sql
+                = "SELECT "
+                + COLUMNAS
+                + " FROM clientes WHERE hotel_id = ? "
+                + "AND id = ? FOR UPDATE";
+
+        return ejecutorDAO.consultarUno(
+                sql,
+                this::mapear,
+                proveedorHotelId.getHotelId(),
+                id
+        );
+    }
+
+    @Override
     public Optional<Cliente> buscarPorDocumento(String documento) {
         String sql
                 = "SELECT "
