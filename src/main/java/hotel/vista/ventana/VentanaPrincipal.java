@@ -96,9 +96,7 @@ public final class VentanaPrincipal extends JFrame {
         JTabbedPane tabs = new JTabbedPane();
         tabs.addTab("Inicio", new PanelDashboard(
                 usuario,
-                aplicacion.habitacionControlador(),
-                aplicacion.clienteControlador(),
-                aplicacion.reservaControlador()
+                aplicacion.estadisticasControlador()
         ));
 
         if (usuario.getRol() == RolUsuario.RECEPCIONISTA) {
@@ -136,9 +134,7 @@ public final class VentanaPrincipal extends JFrame {
             ));
 
             tabs.addTab("Reportes", new PanelReportes(
-                    aplicacion.habitacionControlador(),
-                    aplicacion.clienteControlador(),
-                    aplicacion.reservaControlador()
+                    aplicacion.estadisticasControlador()
             )
             );
         }

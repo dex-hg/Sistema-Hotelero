@@ -1,14 +1,8 @@
 package hotel.vista.panel;
 
-import hotel.controlador.ClienteControlador;
-import hotel.controlador.HabitacionControlador;
-import hotel.controlador.ReservaControlador;
-
-import hotel.modelo.entidades.Habitacion;
-import hotel.modelo.entidades.Reserva;
+import hotel.controlador.EstadisticasControlador;
 import hotel.modelo.entidades.Usuario;
-import hotel.modelo.entidades.constantes.EstadoHabitacion;
-import hotel.modelo.entidades.constantes.EstadoReserva;
+import hotel.modelo.servicio.ResumenDashboard;
 import hotel.vista.VistaUtil;
 
 import javax.swing.JButton;
@@ -21,32 +15,24 @@ import java.awt.GridLayout;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.EnumMap;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
 
 public final class PanelDashboard extends JPanel implements PanelActualizable {
 
     private final Usuario usuario;
-    private final HabitacionControlador habitaciones;
-    private final ClienteControlador clientes;
-    private final ReservaControlador reservas;
+    private final EstadisticasControlador estadisticas;
 
     private final JPanel tarjetas = new JPanel(new GridLayout(1, 4, 24, 0));
     private final JPanel avisos = new JPanel(new GridLayout(0, 1, 0, 10));
 
     public PanelDashboard(
             Usuario usuario,
-            HabitacionControlador habitaciones,
-            ClienteControlador clientes,
-            ReservaControlador reservas
+            EstadisticasControlador estadisticas
     ) {
         super(new BorderLayout(18, 18));
         this.usuario = Objects.requireNonNull(usuario);
-        this.habitaciones = Objects.requireNonNull(habitaciones);
-        this.clientes = Objects.requireNonNull(clientes);
-        this.reservas = Objects.requireNonNull(reservas);
+        this.estadisticas = Objects.requireNonNull(estadisticas);
         construir();
         refrescarAsync();
     }
@@ -87,60 +73,29 @@ public final class PanelDashboard extends JPanel implements PanelActualizable {
         VistaUtil.ejecutarAsync(
                 this,
                 null,
-                () -> {
-                    java.util.List<Reserva> listadoReservas = reservas.listar();
-                    return new DatosDashboard(
-                            habitaciones.listar(),
-                            clientes.listar().size(),
-                            listadoReservas
-                    );
-                },
+                estadisticas::obtenerDashboard,
                 this::aplicarDatos,
                 null
         );
     }
 
-    private void aplicarDatos(DatosDashboard datos) {
-        Map<EstadoHabitacion, Integer> porHabitacion = contarHabitaciones(
-                datos.habitaciones()
-        );
-        Map<EstadoReserva, Integer> porReserva = contarReservas(
-                datos.reservas()
-        );
-
-        int disponibles = porHabitacion.getOrDefault(
-                EstadoHabitacion.DISPONIBLE,
-                0
-        );
-        int ocupadas = porHabitacion.getOrDefault(
-                EstadoHabitacion.OCUPADA,
-                0
-        );
-        int limpieza = porHabitacion.getOrDefault(
-                EstadoHabitacion.EN_LIMPIEZA,
-                0
-        );
-        int activas = porReserva.getOrDefault(
-                EstadoReserva.ACTIVA,
-                0
-        );
-
+    private void aplicarDatos(ResumenDashboard datos) {
         tarjetas.removeAll();
         tarjetas.add(VistaUtil.tarjetaResumen(
                 "Habitaciones disponibles",
-                String.valueOf(disponibles),
+                String.valueOf(datos.habitacionesDisponibles()),
                 "DIS",
                 new Color(25, 118, 210)
         ));
         tarjetas.add(VistaUtil.tarjetaResumen(
                 "Habitaciones ocupadas",
-                String.valueOf(ocupadas),
+                String.valueOf(datos.habitacionesOcupadas()),
                 "OCU",
                 new Color(20, 135, 84)
         ));
         tarjetas.add(VistaUtil.tarjetaResumen(
                 "Reservas activas",
-                String.valueOf(activas),
+                String.valueOf(datos.reservasActivas()),
                 "RES",
                 new Color(230, 126, 34)
         ));
@@ -154,15 +109,15 @@ public final class PanelDashboard extends JPanel implements PanelActualizable {
         avisos.removeAll();
         avisos.add(aviso(
                 "Habitaciones pendientes de limpieza: "
-                + limpieza
+                + datos.habitacionesEnLimpieza()
         ));
         avisos.add(aviso(
                 "Reservas activas por atender: "
-                + activas
+                + datos.reservasActivas()
         ));
         avisos.add(aviso(
                 "Habitaciones ocupadas actualmente: "
-                + ocupadas
+                + datos.habitacionesOcupadas()
         ));
 
         revalidate();
@@ -201,34 +156,4 @@ public final class PanelDashboard extends JPanel implements PanelActualizable {
         return LocalDate.now().format(formato);
     }
 
-    private Map<EstadoHabitacion, Integer> contarHabitaciones(
-            java.util.List<Habitacion> listado
-    ) {
-        Map<EstadoHabitacion, Integer> conteo = new EnumMap<>(
-                EstadoHabitacion.class
-        );
-        for (Habitacion habitacion : listado) {
-            conteo.merge(habitacion.getEstado(), 1, Integer::sum);
-        }
-        return conteo;
-    }
-
-    private Map<EstadoReserva, Integer> contarReservas(
-            java.util.List<Reserva> listado
-    ) {
-        Map<EstadoReserva, Integer> conteo = new EnumMap<>(
-                EstadoReserva.class
-        );
-        for (Reserva reserva : listado) {
-            conteo.merge(reserva.getEstado(), 1, Integer::sum);
-        }
-        return conteo;
-    }
-
-    private record DatosDashboard(
-            java.util.List<Habitacion> habitaciones,
-            int cantidadClientes,
-            java.util.List<Reserva> reservas
-    ) {
-    }
 }

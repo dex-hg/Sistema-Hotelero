@@ -5,16 +5,46 @@ import hotel.conexion.EjecutorTransaccional;
 import hotel.conexion.ProveedorConexion;
 import hotel.conexion.ProveedorConexionTransaccional;
 
-import hotel.controlador.*;
+import hotel.controlador.AutenticacionControlador;
+import hotel.controlador.ClienteControlador;
+import hotel.controlador.EstadisticasControlador;
+import hotel.controlador.HabitacionControlador;
+import hotel.controlador.HotelControlador;
+import hotel.controlador.ReservaControlador;
 
-import hotel.dao.*;
-import hotel.dao.jdbc.*;
+import hotel.dao.AutenticacionUsuarioDAO;
+import hotel.dao.ClienteDAO;
+import hotel.dao.HabitacionDAO;
+import hotel.dao.HotelDAO;
+import hotel.dao.ReservaDAO;
+import hotel.dao.UsuarioDAO;
+import hotel.dao.jdbc.AutenticacionUsuarioDAOJdbc;
+import hotel.dao.jdbc.ClienteDAOJdbc;
+import hotel.dao.jdbc.HabitacionDAOJdbc;
+import hotel.dao.jdbc.HotelDAOJdbc;
+import hotel.dao.jdbc.ReservaDAOJdbc;
+import hotel.dao.jdbc.UsuarioDAOJdbc;
 
-import hotel.modelo.servicio.*;
-import hotel.modelo.servicio.impl.*;
+import hotel.modelo.servicio.AutenticacionServicio;
+import hotel.modelo.servicio.ClienteServicio;
+import hotel.modelo.servicio.EstadisticasServicio;
+import hotel.modelo.servicio.HabitacionServicio;
+import hotel.modelo.servicio.HotelServicio;
+import hotel.modelo.servicio.ReservaServicio;
+import hotel.modelo.servicio.impl.AutenticacionServicioImpl;
+import hotel.modelo.servicio.impl.ClienteServicioImpl;
+import hotel.modelo.servicio.impl.EstadisticasServicioImpl;
+import hotel.modelo.servicio.impl.HabitacionServicioImpl;
+import hotel.modelo.servicio.impl.HotelServicioImpl;
+import hotel.modelo.servicio.impl.ReservaServicioImpl;
+import hotel.modelo.seguridad.AutorizadorAcceso;
+import hotel.modelo.seguridad.AutorizadorSesion;
 import hotel.modelo.sesion.ContextoSesion;
 
-import hotel.patrones.estructural.*;
+import hotel.patrones.estructural.ClienteDAOProxy;
+import hotel.patrones.estructural.HabitacionDAOProxy;
+import hotel.patrones.estructural.ReservaDAOProxy;
+import hotel.patrones.estructural.UsuarioDAOProxy;
 
 import java.util.Objects;
 
@@ -44,12 +74,14 @@ public final class ComposicionAplicacion {
     private final HabitacionServicio habitacionServicio;
     private final ClienteServicio clienteServicio;
     private final ReservaServicio reservaServicio;
+    private final EstadisticasServicio estadisticasServicio;
 
     private final AutenticacionControlador autenticacionControlador;
     private final HotelControlador hotelControlador;
     private final HabitacionControlador habitacionControlador;
     private final ClienteControlador clienteControlador;
     private final ReservaControlador reservaControlador;
+    private final EstadisticasControlador estadisticasControlador;
 
     public ComposicionAplicacion() {
         this(
@@ -69,6 +101,9 @@ public final class ComposicionAplicacion {
                 = (EjecutorTransaccional) this.proveedorConexion;
 
         this.contextoSesion = Objects.requireNonNull(contextoSesion);
+        AutorizadorAcceso autorizadorAcceso = new AutorizadorSesion(
+                this.contextoSesion
+        );
 
         this.hotelDAO = new HotelDAOJdbc(
                 this.proveedorConexion
@@ -83,7 +118,8 @@ public final class ComposicionAplicacion {
                         this.proveedorConexion,
                         this.contextoSesion
                 ),
-                this.contextoSesion
+                this.contextoSesion,
+                autorizadorAcceso
         );
 
         this.habitacionDAO = new HabitacionDAOProxy(
@@ -117,17 +153,20 @@ public final class ComposicionAplicacion {
         );
 
         this.hotelServicio = new HotelServicioImpl(
-                this.hotelDAO
+                this.hotelDAO,
+                this.contextoSesion
         );
 
         this.habitacionServicio = new HabitacionServicioImpl(
                 this.habitacionDAO,
-                this.contextoSesion
+                this.contextoSesion,
+                autorizadorAcceso
         );
 
         this.clienteServicio = new ClienteServicioImpl(
                 this.clienteDAO,
-                this.contextoSesion
+                this.contextoSesion,
+                autorizadorAcceso
         );
 
         this.reservaServicio = new ReservaServicioImpl(
@@ -135,7 +174,14 @@ public final class ComposicionAplicacion {
                 this.habitacionDAO,
                 this.clienteDAO,
                 this.contextoSesion,
-                this.ejecutorTransaccional
+                this.ejecutorTransaccional,
+                autorizadorAcceso
+        );
+
+        this.estadisticasServicio = new EstadisticasServicioImpl(
+                this.habitacionDAO,
+                this.clienteDAO,
+                this.reservaDAO
         );
 
         this.autenticacionControlador = new AutenticacionControlador(
@@ -157,34 +203,14 @@ public final class ComposicionAplicacion {
         this.reservaControlador = new ReservaControlador(
                 this.reservaServicio
         );
+
+        this.estadisticasControlador = new EstadisticasControlador(
+                this.estadisticasServicio
+        );
     }
 
     public ContextoSesion contextoSesion() {
         return contextoSesion;
-    }
-
-    public EjecutorTransaccional ejecutorTransaccional() {
-        return ejecutorTransaccional;
-    }
-
-    public HotelDAO hotelDAO() {
-        return hotelDAO;
-    }
-
-    public UsuarioDAO usuarioDAO() {
-        return usuarioDAO;
-    }
-
-    public HabitacionDAO habitacionDAO() {
-        return habitacionDAO;
-    }
-
-    public ClienteDAO clienteDAO() {
-        return clienteDAO;
-    }
-
-    public ReservaDAO reservaDAO() {
-        return reservaDAO;
     }
 
     public AutenticacionControlador autenticacionControlador() {
@@ -205,6 +231,10 @@ public final class ComposicionAplicacion {
 
     public ReservaControlador reservaControlador() {
         return reservaControlador;
+    }
+
+    public EstadisticasControlador estadisticasControlador() {
+        return estadisticasControlador;
     }
 
     private ProveedorConexion prepararProveedorConexion(
